@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQUID TECH Admin</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <h1>SQUID TECH Admin</h1>
+            <p class="subtitle">Approve participants and manage invites</p>
+        </header>
+
+        <section class="admin-panel" id="adminPanel">
+            <div class="admin-header">
+                <h3>Admin Panel</h3>
+                <span id="adminStatus" class="admin-status">Signed out</span>
+            </div>
+
+            <div class="admin-auth">
+                <input id="adminEmail" type="email" placeholder="Admin email" />
+                <input id="adminPassword" type="password" placeholder="Admin password" />
+                <div class="admin-auth-actions">
+                    <button id="adminLoginBtn" class="admin-btn">Sign In</button>
+                    <button id="adminLogoutBtn" class="admin-btn" disabled>Sign Out</button>
+                </div>
+                <p class="admin-hint">Admins are defined in Firestore collection <strong>admins/{uid}</strong>.</p>
+            </div>
+
+            <div class="admin-sections">
+                <div class="admin-section">
+                    <h4>Invite List (Invite-Only)</h4>
+                    <div class="admin-row">
+                        <input id="inviteName" type="text" placeholder="Invite name" />
+                        <button id="addInviteBtn" class="admin-btn">Add</button>
+                    </div>
+                    <ul id="inviteList" class="admin-list"></ul>
+                </div>
+
+                <div class="admin-section">
+                    <h4>Join Requests</h4>
+                    <ul id="joinRequestsList" class="admin-list"></ul>
+                </div>
+            </div>
+        </section>
+
+        <div class="admin-toggle-wrap">
+            <a class="admin-link" href="index.html">Back to Game</a>
+        </div>
+    </div>
+
+    <script type="module" src="src/admin.js"></script>
+</body>
+</html>

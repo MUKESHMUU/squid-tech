@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQUID TECH: Code to Survive - Round 1</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header -->
+        <header class="game-header">
+            <h1>SQUID TECH: Code to Survive</h1>
+            <p class="subtitle">Round 1 - Green Light 🟢 / Red Light 🔴</p>
+        </header>
+
+        <!-- Game Stats -->
+        <div class="game-stats">
+            <div class="stat-box">
+                <span class="stat-label">Round</span>
+                <span class="stat-value" id="currentRound">1</span> / 30
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Score</span>
+                <span class="stat-value" id="currentScore">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Total Time</span>
+                <span class="stat-value" id="totalTime">00:00</span>
+            </div>
+        </div>
+
+        <!-- Game Board -->
+        <div class="game-board">
+            <!-- Phase Indicator -->
+            <div class="phase-indicator" id="phaseIndicator">
+                <div class="phase-light"></div>
+                <span id="phaseText">Waiting to Start...</span>
+            </div>
+
+            <!-- Timer Display -->
+            <div class="timer-display">
+                <div class="timer-circle">
+                    <svg viewBox="0 0 100 100" class="timer-svg">
+                        <circle cx="50" cy="50" r="45" class="timer-bg"></circle>
+                        <circle cx="50" cy="50" r="45" class="timer-progress" id="timerProgress" style="stroke-dashoffset: 282.7;"></circle>
+                    </svg>
+                    <span class="timer-text" id="timerText">00:00</span>
+                </div>
+            </div>
+
+            <!-- Scenario Display (Green Light) -->
+            <div class="scenario-box" id="scenarioBox" style="display: none;">
+                <h3>Scenario 📖</h3>
+                <p id="scenarioText"></p>
+            </div>
+
+            <!-- Question Display (Red Light) -->
+            <div class="question-box" id="questionBox" style="display: none;">
+                <h3>Question ❓</h3>
+                <p id="questionText"></p>
+            </div>
+
+            <!-- MCQ Options (Red Light Only) -->
+            <div class="answer-section" id="answerSection" style="display: none;">
+                <div class="mcq-container">
+                    <button class="mcq-option" data-option="0" disabled></button>
+                    <button class="mcq-option" data-option="1" disabled></button>
+                    <button class="mcq-option" data-option="2" disabled></button>
+                    <button class="mcq-option" data-option="3" disabled></button>
+                </div>
+                <div class="submission-status" id="submissionStatus"></div>
+            </div>
+
+            <!-- Game Not Started -->
+            <div class="start-section" id="startSection">
+                <p class="start-message">Ready to face the challenge?</p>
+                <div style="display:flex; flex-direction:column; gap:8px; align-items:center; width:100%; max-width:420px;">
+                    <input id="playerName" placeholder="Enter display name" style="padding:10px; width:100%; border-radius:6px; border:1px solid rgba(255,255,255,0.1);" />
+                    <div id="nameError" style="color: #ff6666; font-size:0.9em; display:none;"></div>
+                    <button id="requestAccessBtn" class="request-btn">Request Access</button>
+                    <div id="accessStatus" class="access-status"></div>
+                    <button id="startBtn" class="start-btn">Start Game</button>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div class="game-over" id="gameOver" style="display: none;">
+                <h2>Game Complete! 🏁</h2>
+                <div class="final-stats">
+                    <div class="final-stat">
+                        <span class="final-label">Final Score</span>
+                        <span class="final-value" id="finalScore">0</span>
+                    </div>
+                    <div class="final-stat">
+                        <span class="final-label">Rounds Completed</span>
+                        <span class="final-value">30 / 30</span>
+                    </div>
+                    <div class="final-stat">
+                        <span class="final-label">Total Time</span>
+                        <span class="final-value" id="finalTime">00:00</span>
+                    </div>
+                </div>
+                <button id="restartBtn" class="restart-btn">Play Again</button>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>How to Play</h3>
+            <ul>
+                <li><strong>🟢 Green Light:</strong> Read the scenario carefully (15 seconds)</li>
+                <li><strong>🔴 Red Light:</strong> Answer the question within 30 seconds</li>
+                <li><strong>⏱️ Scoring:</strong> Answer ≤15s = 1500 points | Answer >15s-30s = 1300 points</li>
+                <li><strong>❌ Wrong Answer:</strong> If score ≥200, reduce to 200. If score =0, stay 0</li>
+                <li>Complete all 30 rounds for your final score</li>
+            </ul>
+        </div>
+    </div>
+
+        <!-- Leaderboard (real-time) -->
+        <div class="leaderboard" id="leaderboard" style="margin-top:20px;">
+            <h3>Leaderboard</h3>
+            <ol id="leaderboardList"></ol>
+        </div>
+
+        <div class="admin-toggle-wrap">
+            <a class="admin-link" href="admin.html">Admin Panel</a>
+        </div>
+
+    <!-- App entry (ES Modules, no inline JS) -->
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
