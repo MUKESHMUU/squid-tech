@@ -1,18 +1,56 @@
 // Modular Firebase v9 service for leaderboard
 let app = null;
 let db = null;
-let auth = null;
 let initialized = false;
 let _lastSubmitAt = 0;
-let firestoreMod = null;
-let authMod = null;
 
+// ─── Admin Auth (no Firebase Auth — simple password) ──────────────────────────
+const ADMIN_PASSWORD = 'squidtech2025'; // ← Change this to your desired password
+const ADMIN_SESSION_KEY = 'squid_admin_session';
+
+// Fake "user" object so admin.js gets a consistent shape
+function makeAdminUser() {
+    return { uid: 'admin', email: 'admin@squidtech' };
+}
+
+export async function signInAdmin(email, password) {
+    // email param ignored — password-only check
+    if (!password) throw new Error('Password required');
+    if (password !== ADMIN_PASSWORD) throw new Error('Incorrect password');
+    localStorage.setItem(ADMIN_SESSION_KEY, '1');
+    // Notify any listeners
+    _notifyAuthListeners(makeAdminUser());
+    return { user: makeAdminUser() };
+}
+
+export async function signOutAdmin() {
+    localStorage.removeItem(ADMIN_SESSION_KEY);
+    _notifyAuthListeners(null);
+}
+
+// Simple pub/sub to mimic onAuthStateChanged
+const _authListeners = new Set();
+
+function _notifyAuthListeners(user) {
+    _authListeners.forEach(cb => { try { cb(user); } catch (e) {} });
+}
+
+export async function onAdminAuthStateChanged(callback) {
+    if (!callback) return () => {};
+    _authListeners.add(callback);
+    // Fire immediately with current state (matches Firebase behaviour)
+    const isLoggedIn = localStorage.getItem(ADMIN_SESSION_KEY) === '1';
+    setTimeout(() => callback(isLoggedIn ? makeAdminUser() : null), 0);
+    return () => _authListeners.delete(callback);
+}
+
+// ─── Firebase / Firestore ─────────────────────────────────────────────────────
 export async function initFirebase(config) {
     if (initialized) return { app, db };
     try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js');
-        firestoreMod = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
         app = initializeApp(config);
+        const firestoreMod = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
         db = firestoreMod.getFirestore(app);
         initialized = true;
         return { app, db };
@@ -20,31 +58,6 @@ export async function initFirebase(config) {
         console.error('Firebase initialization failed', err);
         return { app: null, db: null };
     }
-}
-
-export async function initAuth() {
-    if (!initialized || !app) throw new Error('Firebase not initialized');
-    if (auth) return auth;
-    authMod = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js');
-    auth = authMod.getAuth(app);
-    return auth;
-}
-
-export async function onAdminAuthStateChanged(callback) {
-    if (!callback) return () => {};
-    await initAuth();
-    return authMod.onAuthStateChanged(auth, callback);
-}
-
-export async function signInAdmin(email, password) {
-    if (!email || !password) throw new Error('Email and password required');
-    await initAuth();
-    return authMod.signInWithEmailAndPassword(auth, email, password);
-}
-
-export async function signOutAdmin() {
-    await initAuth();
-    return authMod.signOut(auth);
 }
 
 function normalizeName(name) {
@@ -57,13 +70,10 @@ function normalizeName(name) {
 
 export async function submitScore({ name, score, reactionTime }) {
     if (!initialized || !db) throw new Error('Firebase not initialized');
-
-    // Validation
     if (!name || typeof name !== 'string' || name.trim() === '') throw new Error('Name required');
     if (!Number.isFinite(score)) throw new Error('Score must be numeric');
-    if (score < 0 || score > 200) throw new Error('Score out of allowed range');
+    if (score < 0 || score > 200000) throw new Error('Score out of allowed range');
 
-    // Prevent duplicate rapid submissions (5s)
     const now = Date.now();
     if (now - _lastSubmitAt < 5000) throw new Error('Duplicate submission blocked');
     _lastSubmitAt = now;

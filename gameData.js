@@ -1,363 +1,605 @@
 // Sample game data - exported as ES module
 export const GAME_SCENARIOS = [
+    // === SECTION A: PC BUILDING ===
     {
         id: 1,
-        scenario: "You're trying to log into an app but forgot your password. The app asks you security questions to verify your identity.",
-        question: "What is the app verifying?",
-        correctAnswer: 2,
+        scenario: "Rahul is building his first PC. The system powers on, but there is no display. Fans are spinning normally.",
+        question: "What should he check first?",
+        correctAnswer: 1,
         options: [
-            "Your phone number",
-            "Your internet speed",
-            "Your identity",
-            "Your payment method"
+            "Install antivirus",
+            "Monitor cable and GPU connection",
+            "Change operating system",
+            "Upgrade RAM"
         ]
     },
     {
         id: 2,
-        scenario: "Your friend shares a Google Drive link with you to edit a document. You can see and edit the file without downloading it.",
-        question: "What technology allows this?",
-        correctAnswer: 0,
+        scenario: "Priya installed a new SSD but her PC still boots slowly from the old hard drive.",
+        question: "What is the most likely reason?",
+        correctAnswer: 1,
         options: [
-            "Cloud storage",
-            "USB cable",
-            "Email attachment",
-            "Bluetooth"
+            "SSD is damaged",
+            "BIOS boot order is wrong",
+            "CPU is weak",
+            "Internet is slow"
         ]
     },
     {
         id: 3,
-        scenario: "A website loads slowly. You check and find that the page has 50 large images that download one by one.",
-        question: "What would speed up the loading?",
+        scenario: "During a workshop, a student installs RAM in random slots and the PC shows reduced performance.",
+        question: "Why?",
         correctAnswer: 1,
         options: [
-            "Adding more images",
-            "Making images smaller or loading them in parallel",
-            "Increasing the website size",
-            "Adding more text"
+            "GPU issue",
+            "Dual-channel not enabled",
+            "SSD problem",
+            "Power supply fault"
         ]
     },
     {
         id: 4,
-        scenario: "You're building a simple to-do list app. Each item has a name and a completion status (done/not done).",
-        question: "What is this structure called?",
-        correctAnswer: 2,
+        scenario: "An assembled PC shuts down during heavy gaming.",
+        question: "What should be checked first?",
+        correctAnswer: 1,
         options: [
-            "Algorithm",
-            "Database",
-            "Data structure",
-            "Loop"
+            "Wallpaper settings",
+            "Cooling and power supply",
+            "Browser cache",
+            "Keyboard drivers"
         ]
     },
     {
         id: 5,
-        scenario: "Your app crashes when 1000 users try to access it at the same time, but works fine with 100 users.",
-        question: "What is the issue?",
-        correctAnswer: 3,
+        scenario: "A gamer upgrades only the CPU but still gets low FPS.",
+        question: "What is likely the bottleneck?",
+        correctAnswer: 1,
         options: [
-            "The app is broken",
-            "Users are slow",
-            "The server is too fast",
-            "The server cannot handle the load"
+            "Keyboard",
+            "GPU",
+            "Monitor stand",
+            "WiFi"
         ]
     },
     {
         id: 6,
-        scenario: "A password is 'password123'. An attacker tries to guess it by trying common passwords like 'password', 'qwerty', '123456'.",
-        question: "What attack is this?",
+        scenario: "Arjun upgraded his GPU but forgot to upgrade the power supply. The system crashes under load.",
+        question: "Why?",
         correctAnswer: 1,
         options: [
-            "Hacking",
-            "Brute force attack",
-            "Malware",
-            "Phishing"
+            "Driver color mismatch",
+            "Insufficient PSU wattage",
+            "SSD overheating",
+            "RAM speed too high"
         ]
     },
     {
         id: 7,
-        scenario: "You write a function that takes 2 numbers and returns their sum. You test it with 10 test cases and it passes all.",
-        question: "What is this testing called?",
-        correctAnswer: 0,
+        scenario: "Thermal paste is applied incorrectly and CPU temps spike.",
+        question: "What is the likely result?",
+        correctAnswer: 1,
         options: [
-            "Unit testing",
-            "System testing",
-            "Integration testing",
-            "Manual testing"
-        ]
-    },
-    {
-        id: 8,
-        scenario: "A company's website is down for 2 hours. During this time, no one can access it. The company loses customers.",
-        question: "What does the company need?",
-        correctAnswer: 2,
-        options: [
-            "More developers",
-            "Bigger budget",
-            "Better uptime/reliability",
+            "Better cooling",
+            "CPU throttling",
+            "More RAM speed",
             "Faster internet"
         ]
     },
     {
-        id: 9,
-        scenario: "You're using a mobile app that stores your login session so you don't have to log in every time you open it.",
-        question: "What is being used?",
-        correctAnswer: 3,
+        id: 8,
+        scenario: "A user mixes RAM sticks with different speeds.",
+        question: "What usually happens?",
+        correctAnswer: 1,
         options: [
-            "Cache memory",
-            "RAM",
-            "Cloud storage",
-            "Session/token storage"
+            "PC becomes faster",
+            "Runs at lower compatible speed",
+            "GPU improves",
+            "SSD slows permanently"
+        ]
+    },
+    {
+        id: 9,
+        scenario: "A mini-ITX gaming build overheats despite good hardware.",
+        question: "Most likely issue?",
+        correctAnswer: 0,
+        options: [
+            "Poor airflow design",
+            "Slow internet",
+            "Old monitor",
+            "Wrong wallpaper"
         ]
     },
     {
         id: 10,
-        scenario: "A social media feed shows a mix of posts, stories, and ads. The order changes based on your activity and interactions.",
-        question: "What technology personalizes this?",
+        scenario: "After enabling XMP/EXPO, a PC becomes unstable.",
+        question: "What is the best next step?",
         correctAnswer: 1,
         options: [
-            "Database",
-            "Algorithm",
-            "API",
-            "Server"
+            "Remove GPU",
+            "Reduce RAM frequency or update BIOS",
+            "Change monitor",
+            "Reinstall Windows"
         ]
     },
     {
         id: 11,
-        scenario: "Your school uses a system to send emails to all 500 students at once instead of typing each email individually.",
-        question: "What is being used?",
-        correctAnswer: 0,
+        scenario: "A workstation needs fast editing and storage performance.",
+        question: "What is the best setup?",
+        correctAnswer: 1,
         options: [
-            "Batch processing",
-            "Parallel processing",
-            "Loop iteration",
-            "API call"
+            "HDD only",
+            "NVMe for OS + separate SSD for projects",
+            "USB drive only",
+            "Single slow disk"
         ]
     },
     {
         id: 12,
-        scenario: "A mobile app asks for permission to access your camera, location, and contacts before you can use it.",
-        question: "What is this called?",
-        correctAnswer: 2,
+        scenario: "A builder installs GPU but forgets PCIe power cables.",
+        question: "What happens?",
+        correctAnswer: 1,
         options: [
-            "Encryption",
-            "Authentication",
-            "Authorization/Permissions",
-            "Verification"
+            "GPU boosts performance",
+            "No display or instability",
+            "Faster boot",
+            "Better cooling"
         ]
     },
     {
         id: 13,
-        scenario: "You click a 'Sign in with Google' button instead of creating a new account on a website.",
-        question: "What is this feature?",
+        scenario: "PC powers on but no POST beep and no display.",
+        question: "What is the first troubleshooting step?",
         correctAnswer: 1,
         options: [
-            "Two-factor authentication",
-            "Single sign-on (SSO)",
-            "Session management",
-            "Password reset"
+            "Replace CPU immediately",
+            "Reseat RAM and check power cables",
+            "Format SSD",
+            "Update Windows"
         ]
     },
     {
         id: 14,
-        scenario: "A video streaming app buffers (loads in advance) while you watch. It downloads the next 30 seconds of video ahead of time.",
-        question: "Why does it do this?",
-        correctAnswer: 3,
+        scenario: "A high-end GPU runs hot in a case with a solid front panel.",
+        question: "What is the best fix?",
+        correctAnswer: 1,
         options: [
-            "To waste data",
-            "To make the app slower",
-            "To store the entire video",
-            "To prevent interruptions during playback"
+            "Increase RGB",
+            "Improve case airflow or change case",
+            "Disable drivers",
+            "Lower monitor refresh"
         ]
     },
     {
         id: 15,
-        scenario: "You receive an email claiming to be from your bank asking you to click a link and verify your account details.",
-        question: "What type of attack is this?",
-        correctAnswer: 0,
+        scenario: "A system randomly restarts during gaming after moving the PC.",
+        question: "What should you check first?",
+        correctAnswer: 1,
         options: [
-            "Phishing",
-            "Ransomware",
-            "Virus",
-            "DDoS attack"
+            "Browser extensions",
+            "Loose cables or partially seated GPU",
+            "Wallpaper",
+            "Mouse battery"
         ]
     },
     {
         id: 16,
-        scenario: "A file is locked and only certain people can open it. Others see 'Access Denied'.",
-        question: "What controls this?",
-        correctAnswer: 2,
+        scenario: "A creator wants silent operation with good performance.",
+        question: "What is the best approach?",
+        correctAnswer: 1,
         options: [
-            "Firewall",
-            "Antivirus",
-            "Access control/Permissions",
-            "Proxy"
+            "Small stock cooler",
+            "Larger air cooler and optimized fan curves",
+            "Disable fans",
+            "Overclock everything"
         ]
     },
     {
         id: 17,
-        scenario: "Your internet is slow. You restart your router and the speed improves. This is a common troubleshooting step.",
-        question: "What might restarting fix?",
+        scenario: "BIOS does not recognize a new CPU.",
+        question: "What is the likely fix?",
         correctAnswer: 1,
         options: [
-            "Hardware damage",
-            "Temporary bugs and memory issues",
-            "Broken internet cables",
-            "ISP problems"
+            "Change SSD",
+            "Update BIOS",
+            "Add RGB",
+            "Replace monitor"
         ]
     },
     {
         id: 18,
-        scenario: "A payment website encrypts your credit card details before sending them to the server so hackers cannot read them.",
-        question: "What security measure is this?",
-        correctAnswer: 0,
+        scenario: "USB devices disconnect randomly after a new build.",
+        question: "What is the possible cause?",
+        correctAnswer: 1,
         options: [
-            "Encryption",
-            "Hashing",
-            "Authentication",
-            "Tokenization"
+            "Theme settings",
+            "Front-panel header or power issue",
+            "Browser cache",
+            "Wi-Fi channel"
         ]
     },
     {
         id: 19,
-        scenario: "An app requests different levels of access depending on what you're doing - basic access for viewing, higher access for editing.",
-        question: "What principle is this?",
-        correctAnswer: 3,
+        scenario: "A user wants future-proofing for 3–5 years.",
+        question: "Where should they spend extra budget?",
+        correctAnswer: 1,
         options: [
-            "Zero trust",
-            "Defense in depth",
-            "Least privilege escalation",
-            "Principle of least privilege"
+            "Case stickers",
+            "PSU and motherboard platform",
+            "Mouse pad",
+            "RGB strips"
         ]
     },
     {
         id: 20,
-        scenario: "A website shows loading times: 5 seconds with no cache, 0.5 seconds with cache. Cache stores recently accessed data.",
-        question: "Why is caching beneficial?",
-        correctAnswer: 2,
+        scenario: "GPU temps are fine but hotspot temp is very high.",
+        question: "What can this indicate?",
+        correctAnswer: 1,
         options: [
-            "To make servers crash",
-            "To increase storage",
-            "To speed up data retrieval",
-            "To decrease memory"
+            "Normal always",
+            "Poor contact or paste/pad issue",
+            "Slow internet",
+            "RAM issue"
         ]
     },
     {
         id: 21,
-        scenario: "You're buying something online. The website has SSL (green lock icon) before you enter payment details.",
-        question: "What does SSL do?",
+        scenario: "Slow file transfers between drives in a new build.",
+        question: "What should you check first?",
         correctAnswer: 1,
         options: [
-            "Checks your payment",
-            "Encrypts your connection",
-            "Verifies the seller",
-            "Increases speed"
+            "Wallpaper",
+            "Drive type/slot and interface limits",
+            "Keyboard layout",
+            "Speaker volume"
         ]
     },
     {
         id: 22,
-        scenario: "An app crashes and shows an error message with a code. The developer uses this code to find and fix the bug.",
-        question: "What is this process?",
-        correctAnswer: 3,
+        scenario: "A PC only boots after reseating GPU multiple times.",
+        question: "What is the likely issue?",
+        correctAnswer: 1,
         options: [
-            "Coding",
-            "Testing",
-            "Deployment",
-            "Debugging"
+            "CPU cooler",
+            "PCIe seating or case alignment",
+            "SSD firmware",
+            "Browser plugins"
         ]
     },
     {
         id: 23,
-        scenario: "A service API allows 100 requests per minute per user. Your app tries to make 200 requests in a minute.",
-        question: "What happens?",
-        correctAnswer: 0,
+        scenario: "A user asks whether to upgrade CPU or GPU first for gaming.",
+        question: "What is the best deciding factor?",
+        correctAnswer: 1,
         options: [
-            "Extra requests are rejected (rate limited)",
-            "All requests are accepted",
-            "The server crashes",
-            "Requests are delayed by 1 hour"
+            "RGB sync",
+            "Current usage bottleneck metrics",
+            "Desk size",
+            "OS theme"
         ]
     },
     {
         id: 24,
-        scenario: "You use the same password for email, social media, and banking. One site gets hacked.",
-        question: "What is the consequence?",
-        correctAnswer: 2,
+        scenario: "Cable management blocks airflow in a PC build.",
+        question: "What is the best improvement?",
+        correctAnswer: 1,
         options: [
-            "Only that site is affected",
-            "Your phone gets hacked",
-            "All your accounts are at risk",
-            "Nothing happens"
+            "Remove side panel",
+            "Route cables behind motherboard tray",
+            "Disable fans",
+            "Lower resolution"
         ]
     },
     {
         id: 25,
-        scenario: "A developer writes code that checks if a number is negative before processing it. This prevents errors.",
-        question: "What is this called?",
+        scenario: "A system boots but RAM shows lower speed than advertised.",
+        question: "Why?",
         correctAnswer: 1,
         options: [
-            "Compilation",
-            "Validation",
-            "Execution",
-            "Interpretation"
+            "Broken RAM",
+            "XMP/EXPO not enabled",
+            "GPU issue",
+            "Monitor cable"
         ]
     },
+    // === SECTION B: LATEST & FAMOUS TECH TOPICS ===
     {
         id: 26,
-        scenario: "A company backs up all its data to a separate location every day to protect against data loss.",
-        question: "What is this practice called?",
-        correctAnswer: 0,
+        scenario: "A company wants to add generative AI features to its app.",
+        question: "What should be evaluated first?",
+        correctAnswer: 1,
         options: [
-            "Backup and disaster recovery",
-            "Data migration",
-            "Data compression",
-            "Data encryption"
+            "Logo color",
+            "Cost, accuracy, and privacy risks",
+            "Keyboard type",
+            "Office chairs"
         ]
     },
     {
         id: 27,
-        scenario: "A mobile app shows a spinning wheel while data loads from the server. This tells the user the app is working.",
-        question: "What is this element?",
-        correctAnswer: 2,
+        scenario: "An internal AI chatbot must avoid leaking company data.",
+        question: "What is the best safeguard?",
+        correctAnswer: 1,
         options: [
-            "Button",
-            "Form",
-            "Loading indicator",
-            "Navigation bar"
+            "Public internet access",
+            "Access controls and data filtering",
+            "Bigger GPU",
+            "Disable logs"
         ]
     },
     {
         id: 28,
-        scenario: "A website uses a to-do list feature. Each task can have subtasks, and subtasks can have sub-subtasks.",
-        question: "What structure is this?",
-        correctAnswer: 3,
+        scenario: "Developers rely on AI coding assistants.",
+        question: "What practice keeps code quality high?",
+        correctAnswer: 1,
         options: [
-            "Linear list",
-            "Hash table",
-            "Graph",
-            "Tree or nested structure"
+            "Skip reviews",
+            "Human code review and testing",
+            "Auto-merge all PRs",
+            "Disable CI"
         ]
     },
     {
         id: 29,
-        scenario: "Your app opens a PDF file that doesn't exist. It crashes because the file path is invalid.",
-        question: "What should the app do?",
+        scenario: "A startup considers microservices after scaling issues.",
+        question: "What is a good signal to migrate?",
         correctAnswer: 1,
         options: [
-            "Ignore the error",
-            "Check if file exists before opening it (error handling)",
-            "Delete the file",
-            "Restart the app"
+            "Small team with simple app",
+            "Independent scaling needs",
+            "Fewer users",
+            "No deployments"
         ]
     },
     {
         id: 30,
-        scenario: "A student writes a project report and saves it as PDF. They share the PDF with others who can view but not edit it.",
-        question: "What advantage does PDF have?",
-        correctAnswer: 0,
+        scenario: "A cloud bill doubled after a release.",
+        question: "What is the first investigation step?",
+        correctAnswer: 1,
         options: [
-            "Read-only format preserves original formatting",
-            "PDF loads faster than Word",
-            "PDF takes less space",
-            "PDF allows editing on all devices"
+            "Buy more servers",
+            "Check resource usage and autoscaling",
+            "Change logo",
+            "Reset passwords"
+        ]
+    },
+    {
+        id: 31,
+        scenario: "A bad CI/CD deployment breaks production.",
+        question: "What should already exist to handle this?",
+        correctAnswer: 1,
+        options: [
+            "Extra meetings",
+            "Rollback strategy",
+            "Bigger monitors",
+            "New IDE"
+        ]
+    },
+    {
+        id: 32,
+        scenario: "An app must handle millions of users during a live event.",
+        question: "What is the key preparation?",
+        correctAnswer: 1,
+        options: [
+            "Manual scaling",
+            "Load testing and autoscaling",
+            "Disable caching",
+            "Single server"
+        ]
+    },
+    {
+        id: 33,
+        scenario: "A team wants Kubernetes but lacks experience.",
+        question: "What is the best approach?",
+        correctAnswer: 1,
+        options: [
+            "Migrate everything at once",
+            "Start with a small non-critical service",
+            "Avoid monitoring",
+            "Remove containers"
+        ]
+    },
+    {
+        id: 34,
+        scenario: "A company adopts a lakehouse platform like Databricks.",
+        question: "What is the main benefit?",
+        correctAnswer: 1,
+        options: [
+            "Gaming support",
+            "Unified data + analytics + ML",
+            "Better wallpapers",
+            "Faster keyboards"
+        ]
+    },
+    {
+        id: 35,
+        scenario: "A company is hit by ransomware.",
+        question: "What is the first technical action to take?",
+        correctAnswer: 1,
+        options: [
+            "Ignore it",
+            "Isolate affected systems",
+            "Restart PCs",
+            "Delete backups"
+        ]
+    },
+    {
+        id: 36,
+        scenario: "You find an open cloud storage bucket exposing data.",
+        question: "What should you do first?",
+        correctAnswer: 1,
+        options: [
+            "Share the link",
+            "Restrict access immediately",
+            "Rename files",
+            "Increase storage"
+        ]
+    },
+    {
+        id: 37,
+        scenario: "An AI model shows biased outputs.",
+        question: "What should you review?",
+        correctAnswer: 1,
+        options: [
+            "Keyboard drivers",
+            "Training data and evaluation metrics",
+            "Monitor size",
+            "CPU cooler"
+        ]
+    },
+    {
+        id: 38,
+        scenario: "A mobile app slows down after adding analytics SDKs.",
+        question: "What is the best step?",
+        correctAnswer: 1,
+        options: [
+            "Add more SDKs",
+            "Profile performance and remove heavy calls",
+            "Change icons",
+            "Reduce RAM"
+        ]
+    },
+    {
+        id: 39,
+        scenario: "A product manager wants real-time dashboards.",
+        question: "What is the suitable approach?",
+        correctAnswer: 1,
+        options: [
+            "Batch-only jobs",
+            "Streaming pipelines",
+            "Manual exports",
+            "Email reports only"
+        ]
+    },
+    {
+        id: 40,
+        scenario: "A team is choosing whether to use serverless architecture.",
+        question: "When is serverless a poor fit?",
+        correctAnswer: 1,
+        options: [
+            "Event-driven APIs",
+            "Long-running heavy workloads",
+            "Small tasks",
+            "Infrequent jobs"
+        ]
+    },
+    {
+        id: 41,
+        scenario: "A team is deciding between SQL and NoSQL for a fast-changing product.",
+        question: "What is the key criterion?",
+        correctAnswer: 1,
+        options: [
+            "Team favorite",
+            "Data access patterns and consistency needs",
+            "Logo color",
+            "Screen size"
+        ]
+    },
+    {
+        id: 42,
+        scenario: "A security team adopts a zero-trust model.",
+        question: "What does zero-trust security mean?",
+        correctAnswer: 1,
+        options: [
+            "Trust the internal network",
+            "Verify every request",
+            "Share credentials freely",
+            "Disable MFA"
+        ]
+    },
+    {
+        id: 43,
+        scenario: "An ML model degrades in production due to data drift.",
+        question: "What helps address this?",
+        correctAnswer: 1,
+        options: [
+            "Ignore metrics",
+            "Monitoring and retraining pipeline",
+            "More UI tests",
+            "Larger font"
+        ]
+    },
+    {
+        id: 44,
+        scenario: "A team chooses edge computing for IoT devices.",
+        question: "What is the main reason?",
+        correctAnswer: 1,
+        options: [
+            "Increase cloud latency",
+            "Reduce latency and bandwidth usage",
+            "Remove devices",
+            "Avoid updates"
+        ]
+    },
+    {
+        id: 45,
+        scenario: "A company is training an AI model under strict privacy regulations.",
+        question: "What is required?",
+        correctAnswer: 1,
+        options: [
+            "Raw data sharing",
+            "Data minimization and anonymization",
+            "No logs",
+            "Public datasets only"
+        ]
+    },
+    {
+        id: 46,
+        scenario: "A social app sees bot activity spikes.",
+        question: "What is the best response?",
+        correctAnswer: 1,
+        options: [
+            "Disable the app",
+            "Rate limiting and behavior detection",
+            "Remove all users",
+            "Change theme"
+        ]
+    },
+    {
+        id: 47,
+        scenario: "A development team is considering WebAssembly for their web app.",
+        question: "When is WebAssembly most useful?",
+        correctAnswer: 1,
+        options: [
+            "Simple static pages",
+            "Performance-critical browser tasks",
+            "Writing CSS",
+            "Sending emails"
+        ]
+    },
+    {
+        id: 48,
+        scenario: "Global users face high latency in a fintech app.",
+        question: "What is the best improvement?",
+        correctAnswer: 1,
+        options: [
+            "Single region only",
+            "CDN and multi-region deployment",
+            "Bigger logo",
+            "Disable caching"
+        ]
+    },
+    {
+        id: 49,
+        scenario: "An API v2 release breaks existing integrations.",
+        question: "What is the best practice to avoid this?",
+        correctAnswer: 1,
+        options: [
+            "Instant removal of v1",
+            "Versioning and migration period",
+            "No documentation",
+            "Silent changes"
+        ]
+    },
+    {
+        id: 50,
+        scenario: "AI agents are introduced for automation in a company.",
+        question: "What does a safe rollout require?",
+        correctAnswer: 1,
+        options: [
+            "Full autonomy immediately",
+            "Human-in-the-loop controls",
+            "No monitoring",
+            "Disable logs"
         ]
     }
 ];

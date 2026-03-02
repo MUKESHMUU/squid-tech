@@ -13,7 +13,7 @@ const FIREBASE_CONFIG = {
 async function initAdmin() {
     document.documentElement.classList.add('js-ready');
 
-    const adminEmail = getElement('#adminEmail', false);
+    // Note: adminEmail input is kept in HTML but hidden — we ignore it for auth
     const adminPassword = getElement('#adminPassword', false);
     const adminLoginBtn = getElement('#adminLoginBtn', false);
     const adminLogoutBtn = getElement('#adminLogoutBtn', false);
@@ -22,6 +22,17 @@ async function initAdmin() {
     const addInviteBtn = getElement('#addInviteBtn', false);
     const inviteList = getElement('#inviteList', false);
     const joinRequestsList = getElement('#joinRequestsList', false);
+
+    // Hide the email field — password only
+    const adminEmail = getElement('#adminEmail', false);
+    if (adminEmail) {
+        adminEmail.style.display = 'none';
+        adminEmail.closest && adminEmail.closest('p') && (adminEmail.closest('p').style.display = 'none');
+    }
+
+    // Hide the "admins are defined in Firestore" hint — no longer relevant
+    const adminHint = document.querySelector('.admin-hint');
+    if (adminHint) adminHint.style.display = 'none';
 
     const { db } = await FB.initFirebase(FIREBASE_CONFIG);
     if (!db && adminStatus) adminStatus.textContent = 'Firebase not available.';
@@ -56,7 +67,7 @@ async function initAdmin() {
         });
     }
 
-    function renderJoinRequests(items, adminEmailValue) {
+    function renderJoinRequests(items) {
         if (!joinRequestsList) return;
         joinRequestsList.innerHTML = '';
         if (!items.length) {
@@ -75,14 +86,14 @@ async function initAdmin() {
             approveBtn.className = 'admin-btn';
             approveBtn.textContent = 'Approve';
             approveBtn.addEventListener('click', async () => {
-                try { await FB.approveJoin(name, adminEmailValue); } catch (e) { console.error(e); }
+                try { await FB.approveJoin(name, 'admin'); } catch (e) { console.error(e); }
             });
 
             const denyBtn = document.createElement('button');
             denyBtn.className = 'admin-btn';
             denyBtn.textContent = 'Deny';
             denyBtn.addEventListener('click', async () => {
-                try { await FB.denyJoin(name, adminEmailValue); } catch (e) { console.error(e); }
+                try { await FB.denyJoin(name, 'admin'); } catch (e) { console.error(e); }
             });
 
             actions.appendChild(approveBtn);
@@ -94,7 +105,7 @@ async function initAdmin() {
     }
 
     function setAdminUi(user) {
-        if (adminStatus) adminStatus.textContent = user ? `Signed in: ${user.email || user.uid}` : 'Signed out';
+        if (adminStatus) adminStatus.textContent = user ? 'Signed in as Admin' : 'Signed out';
         if (adminLoginBtn) adminLoginBtn.disabled = !!user;
         if (adminLogoutBtn) adminLogoutBtn.disabled = !user;
         if (!user) {
@@ -105,10 +116,27 @@ async function initAdmin() {
 
     if (adminLoginBtn) {
         adminLoginBtn.addEventListener('click', async () => {
-            const email = adminEmail ? adminEmail.value.trim() : '';
             const password = adminPassword ? adminPassword.value : '';
-            try { await FB.signInAdmin(email, password); }
-            catch (e) { console.error(e); if (adminStatus) adminStatus.textContent = 'Admin sign-in failed.'; }
+            if (!password) {
+                if (adminStatus) adminStatus.textContent = 'Please enter the admin password.';
+                return;
+            }
+            try {
+                await FB.signInAdmin(null, password);
+            } catch (e) {
+                console.error(e);
+                if (adminStatus) adminStatus.textContent = 'Incorrect password.';
+                if (adminPassword) adminPassword.value = '';
+            }
+        });
+    }
+
+    // Allow pressing Enter in password field to log in
+    if (adminPassword) {
+        adminPassword.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && adminLoginBtn && !adminLoginBtn.disabled) {
+                adminLoginBtn.click();
+            }
         });
     }
 
@@ -124,8 +152,7 @@ async function initAdmin() {
             const name = inviteName ? inviteName.value.trim() : '';
             if (!name) return;
             try {
-                const adminEmailValue = adminEmail ? adminEmail.value.trim() : null;
-                await FB.addInvite(name, adminEmailValue);
+                await FB.addInvite(name, 'admin');
                 if (inviteName) inviteName.value = '';
             } catch (e) { console.error(e); }
         });
@@ -138,9 +165,8 @@ async function initAdmin() {
         joinRequestsUnsub = null;
         invitesUnsub = null;
         if (user) {
-            const adminEmailValue = user.email || null;
             invitesUnsub = await FB.listenInvites(items => renderInvites(items));
-            joinRequestsUnsub = await FB.listenJoinRequests(items => renderJoinRequests(items, adminEmailValue));
+            joinRequestsUnsub = await FB.listenJoinRequests(items => renderJoinRequests(items));
         }
     });
 }

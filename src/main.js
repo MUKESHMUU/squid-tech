@@ -48,9 +48,7 @@ async function initApp() {
     }
 
     function validateName() {
-        const name = getPlayerName();
-        const ok = name.length > 0;
-        return ok;
+        return getPlayerName().length > 0;
     }
 
     if (playerInput) {
@@ -125,17 +123,16 @@ async function initApp() {
         subscribeJoinStatus(savedName);
     }
 
-    // Start controller
+    // Start controller — NO session restore on page load
+    // Session is cleared on refresh/close; only persists within an active game run
     const controller = new SquidGameController();
     controller.setStartGuard(() => isApproved);
-    // Session manager (localStorage) - restore if possible
     const sessionManager = new SessionManager();
     controller.setSessionManager(sessionManager);
-    const existing = sessionManager.load();
-    if (existing) {
-        // restore controller state from session; controller will handle timers
-        await controller.restoreFromSession(existing);
-    }
+
+    // Clear any leftover session from a previous visit so player always starts fresh
+    sessionManager.clear();
+
     window.game = controller;
 
     // Leaderboard real-time
@@ -155,26 +152,28 @@ async function initApp() {
             alert('Please set a display name before submitting your score.');
             return;
         }
-        // compute reactionTime (average) if available
         const responses = controller.roundResponses || [];
         const times = responses.map(r => r.submissionTime).filter(t => Number.isFinite(t) && t > 0);
         const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : null;
 
         try {
-            // show saving UI
-            if (controller.dom && controller.dom.submissionStatus) controller.dom.submissionStatus.textContent = 'Saving score...';
+            if (controller.dom && controller.dom.submissionStatus) {
+                controller.dom.submissionStatus.textContent = 'Saving score...';
+            }
             const res = await FB.submitScore({ name, score: controller.score, reactionTime: avg });
             controller.lastSubmissionId = res?.id || null;
-            if (controller.dom && controller.dom.submissionStatus) controller.dom.submissionStatus.textContent = 'Score saved.';
-            try { sessionManager.markFinished(); } catch (e) {}
+            if (controller.dom && controller.dom.submissionStatus) {
+                controller.dom.submissionStatus.textContent = 'Score saved!';
+            }
+            // Clear session after successful score submission
+            try { sessionManager.clear(); } catch (e) {}
         } catch (err) {
             console.error('Score submit failed', err);
-            if (controller.dom && controller.dom.submissionStatus) controller.dom.submissionStatus.textContent = 'Save failed. Try again.';
-        } finally {
-            // refresh handled by real-time listener
+            if (controller.dom && controller.dom.submissionStatus) {
+                controller.dom.submissionStatus.textContent = 'Save failed. Try again.';
+            }
         }
     };
-
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initApp);
