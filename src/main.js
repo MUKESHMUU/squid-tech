@@ -126,7 +126,7 @@ async function initApp() {
     // Start controller — NO session restore on page load
     // Session is cleared on refresh/close; only persists within an active game run
     const controller = new SquidGameController();
-    controller.setStartGuard(() => isApproved);
+    controller.setStartGuard(() => true);
     const sessionManager = new SessionManager();
     controller.setSessionManager(sessionManager);
 
