@@ -28,7 +28,6 @@ async function initApp() {
     const savedName = localStorage.getItem('squid_player_name') || '';
     if (playerInput) playerInput.value = savedName;
 
-    // Block start if no name
     let isApproved = false;
     let joinStatusUnsub = null;
     let lastName = '';
@@ -43,29 +42,33 @@ async function initApp() {
         accessStatus.className = `access-status ${type}`.trim();
     }
 
-    function updateStartEnabled() {
-        const ok = getPlayerName().length > 0 && isApproved;
-        if (startBtn) startBtn.disabled = !ok;
-    }
-
-    function validateName() {
-        return getPlayerName().length > 0;
+    // Start button is always locked for player — only shows status
+    function updateStartBtn() {
+        if (!startBtn) return;
+        startBtn.disabled = true;
+        startBtn.style.cursor = 'not-allowed';
+        if (isApproved && getPlayerName()) {
+            startBtn.textContent = '⏳ Waiting for Admin to Start...';
+            startBtn.style.opacity = '0.75';
+        } else {
+            startBtn.textContent = 'START GAME';
+            startBtn.style.opacity = '0.4';
+        }
     }
 
     if (playerInput) {
         playerInput.addEventListener('input', () => {
             const name = getPlayerName();
-            validateName();
             localStorage.setItem('squid_player_name', name);
             if (name !== lastName) {
                 lastName = name;
                 subscribeJoinStatus(name);
             }
-            updateStartEnabled();
+            updateStartBtn();
         });
     }
 
-    updateStartEnabled();
+    updateStartBtn();
 
     // Initialize Firebase (single call)
     const { db } = await FB.initFirebase(FIREBASE_CONFIG);
@@ -74,13 +77,13 @@ async function initApp() {
     async function subscribeJoinStatus(name) {
         if (joinStatusUnsub) joinStatusUnsub();
         isApproved = false;
-        updateStartEnabled();
+        updateStartBtn();
         if (!db || !name) return;
         joinStatusUnsub = await FB.listenJoinStatus(name, data => {
             const status = data?.status || 'none';
             if (status === 'approved') {
                 isApproved = true;
-                setAccessStatus('Approved. You can start.', 'success');
+                setAccessStatus('✅ Approved! Waiting for admin to start the game.', 'success');
             } else if (status === 'pending') {
                 isApproved = false;
                 setAccessStatus('Request pending approval.', 'pending');
@@ -91,7 +94,7 @@ async function initApp() {
                 isApproved = false;
                 setAccessStatus('Invite-only. Request access to join.', '');
             }
-            updateStartEnabled();
+            updateStartBtn();
         });
     }
 
@@ -124,17 +127,32 @@ async function initApp() {
         subscribeJoinStatus(savedName);
     }
 
-    // Start controller — NO session restore on page load
-    // Session is cleared on refresh/close; only persists within an active game run
+    // Start controller
     const controller = new SquidGameController();
     controller.setStartGuard(() => true);
     const sessionManager = new SessionManager();
     controller.setSessionManager(sessionManager);
-
-    // Clear any leftover session from a previous visit so player always starts fresh
     sessionManager.clear();
-
     window.game = controller;
+
+    // ── Listen for admin global game start signal ──────────────────────────────
+    if (db) {
+        await FB.listenGameStart(data => {
+            if (data?.started === true && isApproved && getPlayerName()) {
+                // Admin fired — unlock controller and launch
+                setAccessStatus('🚀 Game is starting!', 'success');
+                setTimeout(() => {
+                    controller.unlockAndStart();
+                }, 300);
+
+            } else if (data?.started === false) {
+                // Admin reset — re-lock everything
+                controller.adminCanStart = false;
+                updateStartBtn();
+                if (isApproved) setAccessStatus('✅ Approved! Waiting for admin to start the game.', 'success');
+            }
+        });
+    }
 
     // Leaderboard real-time
     if (db && leaderboardList) {
@@ -166,7 +184,6 @@ async function initApp() {
             if (controller.dom && controller.dom.submissionStatus) {
                 controller.dom.submissionStatus.textContent = 'Score saved!';
             }
-            // Clear session after successful score submission
             try { sessionManager.clear(); } catch (e) {}
         } catch (err) {
             console.error('Score submit failed', err);

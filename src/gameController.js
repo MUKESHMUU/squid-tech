@@ -9,20 +9,22 @@ export class SquidGameController {
         this.gameStarted = false;
         this.gameOver = false;
         this.currentRoundIndex = 0;
-        this.currentPhase = null; // 'green'|'red'
+        this.currentPhase = null;
         this.score = 0;
         this.roundResponses = [];
         this.answerLocked = false;
         this.greenLightDuration = 0;
         this.redLightDuration = 30;
         this.greenLightEndTime = null;
+        this.isReady = false;       // player clicked "I'm Ready"
+        this.adminCanStart = false; // only true when admin fires signal
 
         // Timers
         this.phaseTimerInterval = null;
         this.phaseAutoAdvanceTimeout = null;
         this.overallTimerInterval = null;
         this.overallStartTime = null;
-        this.redStartTime = null; // clearer than re-using green end time
+        this.redStartTime = null;
 
         // DOM
         this.dom = this.collectDom();
@@ -30,7 +32,6 @@ export class SquidGameController {
         this.attachListeners();
         this.lastSubmissionId = null;
         this.startGuard = null;
-        // session support (may be injected later)
         this.sessionManager = null;
         this._saveThrottle = null;
         this._sessionLocked = false;
@@ -65,7 +66,6 @@ export class SquidGameController {
     }
 
     verifyDomInit() {
-        // If any required element is missing (null), disable the start button and prevent crashes
         const missing = Object.entries(this.dom).filter(([, el]) => el === null);
         if (missing.length > 0) {
             console.error('DOM initialization failed. Missing required elements:', missing.map(m => m[0]));
@@ -78,10 +78,37 @@ export class SquidGameController {
     }
 
     attachListeners() {
-        if (this.dom.startBtn) this.dom.startBtn.addEventListener('click', () => this.startGame());
-        if (this.dom.restartBtn) this.dom.restartBtn.addEventListener('click', () => this.restartGame());
+        if (this.dom.startBtn) {
+            // Button is "I'm Ready" — clicking ONLY marks player as ready
+            // It NEVER starts the game. Only unlockAndStart() from admin signal does that.
+            this.dom.startBtn.textContent = "I'm Ready";
 
-        // Event delegation for MCQ clicks (supports dynamic rendering)
+            // Inject hint text below the button
+            if (!document.querySelector('#adminStartHint')) {
+                const hint = document.createElement('p');
+                hint.id = 'adminStartHint';
+                hint.textContent = '⚡ Game will start automatically when admin starts it.';
+                hint.style.cssText = 'margin-top:10px;font-size:0.85rem;color:rgba(255,255,255,0.55);text-align:center;letter-spacing:0.3px;';
+                this.dom.startBtn.parentNode && this.dom.startBtn.parentNode.insertBefore(hint, this.dom.startBtn.nextSibling);
+            }
+
+            this.dom.startBtn.addEventListener('click', () => {
+                if (this.isReady) return;
+                this.isReady = true;
+                this.dom.startBtn.textContent = '⏳ Waiting for Admin...';
+                this.dom.startBtn.disabled = true;
+                this.dom.startBtn.style.opacity = '0.7';
+                this.dom.startBtn.style.cursor = 'not-allowed';
+                const hint = document.querySelector('#adminStartHint');
+                if (hint) hint.textContent = '✅ You are marked ready! Game starts when admin launches it.';
+                UI.showToast('✅ You are ready! Waiting for admin to start...', 2500);
+            });
+        }
+
+        if (this.dom.restartBtn) {
+            this.dom.restartBtn.addEventListener('click', () => this.restartGame());
+        }
+
         if (this.dom.mcqContainer) {
             this.dom.mcqContainer.addEventListener('click', (e) => {
                 const btn = e.target.closest('.mcq-option');
@@ -93,6 +120,12 @@ export class SquidGameController {
                 }
             });
         }
+    }
+
+    // Called ONLY by main.js when admin fires the start signal
+    unlockAndStart() {
+        this.adminCanStart = false;
+        this.startGame();
     }
 
     // --- Session integration ---
@@ -126,7 +159,6 @@ export class SquidGameController {
 
     maybeSaveSession() {
         if (!this.sessionManager) return;
-        // throttle local calls to avoid too-frequent updates
         if (this._saveThrottle) clearTimeout(this._saveThrottle);
         this._saveThrottle = setTimeout(() => {
             const s = this.collectSessionState();
@@ -150,11 +182,8 @@ export class SquidGameController {
 
     async restoreFromSession(state) {
         if (!state) return;
-        // integrity checks and allowed transitions
         const allowedPhases = ['idle', 'green', 'red', 'question', 'finished'];
         if (!allowedPhases.includes(state.phase)) return;
-
-        // preserve startedAt
         if (!state.startedAt) return;
 
         this.score = typeof state.score === 'number' ? state.score : 0;
@@ -162,11 +191,9 @@ export class SquidGameController {
         this.updateScoreDisplay();
         this.updateRoundDisplay();
 
-        // restore phase behavior
         if (state.phase === 'green') {
             const remainingMs = (state.greenLightEndTime || 0) - Date.now();
             if (remainingMs <= 0) {
-                // immediately transition to red
                 this.startRedLight();
             } else {
                 this.currentPhase = 'green';
@@ -183,7 +210,6 @@ export class SquidGameController {
             const elapsed = Date.now() - this.redStartTime;
             const remainingMs = Math.max(0, (this.redLightDuration * 1000) - elapsed);
             if (remainingMs <= 0) {
-                // red expired
                 this.endRedLight();
             } else {
                 this.updatePhaseIndicator('red');
@@ -194,12 +220,10 @@ export class SquidGameController {
         } else if (state.phase === 'finished') {
             this.endGame();
         } else {
-            // idle or question - set UI state
             this.currentPhase = state.phase;
             this.updatePhaseIndicator(this.currentPhase);
         }
 
-        // show restoration toast
         UI.showToast('Game restored from previous session', 3000);
     }
 
@@ -208,8 +232,11 @@ export class SquidGameController {
             console.error('Cannot start game: DOM not initialized correctly.');
             return;
         }
+        // Hard block — admin MUST unlock via unlockAndStart()
+        if (!this.adminCanStart) {
+            return;
+        }
         if (this.startGuard && !this.startGuard()) {
-            UI.showToast('Waiting for admin approval.', 2500);
             return;
         }
         this.gameStarted = true;
@@ -233,7 +260,6 @@ export class SquidGameController {
 
     startRound() {
         if (this.currentRoundIndex >= GAME_SCENARIOS.length) return this.endGame();
-
         this.answerLocked = false;
         this.dom.submissionStatus && (this.dom.submissionStatus.textContent = '');
         this.updateRoundDisplay();
@@ -242,8 +268,7 @@ export class SquidGameController {
 
     startGreenLight() {
         this.currentPhase = 'green';
-        this.greenLightDuration = 15; // Fixed 15 seconds
-        // store green end timestamp for reference
+        this.greenLightDuration = 15;
         this.greenLightEndTime = Date.now() + (this.greenLightDuration * 1000);
         this.updatePhaseIndicator('green');
         if (this.dom.scenarioBox) this.dom.scenarioBox.style.display = 'block';
@@ -269,11 +294,8 @@ export class SquidGameController {
 
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
         UI.safeText(this.dom.questionText, scenario?.question || '');
-
-        // Render MCQ dynamically
         UI.renderMCQ(this.dom.mcqContainer, scenario?.options || []);
 
-        // store red start timestamp separately from green end
         this.redStartTime = Date.now();
         this.startPhaseTimer('red', this.redLightDuration);
         clearTimeout(this.phaseAutoAdvanceTimeout);
@@ -320,7 +342,6 @@ export class SquidGameController {
     selectOption(optionIndex) {
         if (this.answerLocked || this.currentPhase !== 'red') return;
         this.selectedOption = optionIndex;
-        // mark selection
         const buttons = this.dom.mcqContainer ? Array.from(this.dom.mcqContainer.querySelectorAll('.mcq-option')) : [];
         buttons.forEach((b, i) => b.classList.toggle('selected', i === optionIndex));
         this.submitAnswer();
@@ -329,7 +350,7 @@ export class SquidGameController {
     submitAnswer() {
         if (this.selectedOption == null || this.answerLocked) return;
         this.answerLocked = true;
-        const submissionTime = this.redStartTime ? (Date.now() - this.redStartTime) / 1000 : 0; // seconds
+        const submissionTime = this.redStartTime ? (Date.now() - this.redStartTime) / 1000 : 0;
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
         const isCorrect = this.selectedOption === scenario.correctAnswer;
         const scoreChange = this.calculateScore(isCorrect, submissionTime);
@@ -355,15 +376,12 @@ export class SquidGameController {
     }
 
     calculateScore(isCorrect, submissionTime) {
-        // validation helper
         const validateResult = (value) => {
             if (!Number.isFinite(value)) {
                 console.warn('calculateScore produced non-finite value:', value);
                 return 0;
             }
-            // ensure integer
             let v = Math.trunc(value);
-            // prevent overflow beyond safe integer
             if (Math.abs(v) > Number.MAX_SAFE_INTEGER) {
                 console.warn('Score value overflow detected:', v);
                 v = Math.sign(v) * Number.MAX_SAFE_INTEGER;
@@ -372,19 +390,14 @@ export class SquidGameController {
         };
 
         if (!isCorrect) {
-            // Wrong answer -> enforce UI rule: if current score >= 200, final score becomes exactly 200.
             if (this.score >= 200) {
-                const delta = 200 - this.score; // negative or zero, will set final to 200
+                const delta = 200 - this.score;
                 return validateResult(delta);
             }
-
             if (this.score === 0) return 0;
-
-            // otherwise reduce to 0
             return validateResult(-this.score);
         }
 
-        // Correct answer scoring
         let points = 0;
         if (submissionTime <= 15) points = 1500;
         else if (submissionTime <= 30) points = 1300;
@@ -407,11 +420,19 @@ export class SquidGameController {
         if (isCorrect) {
             statusEl.className = 'success';
             const pointsText = scoreChange >= 1500 ? '1500 points ⚡' : '1300 points ✓';
-            statusEl.innerHTML = `\n                <div style="font-size: 1.1em">✅ Correct!</div>\n                <div style="font-size: 0.95em">+${pointsText}</div>\n                <div style="font-size:0.85em; margin-top:4px">Time: ${submissionTime.toFixed(1)}s | Total Score: ${this.score}</div>\n            `;
+            statusEl.innerHTML = `
+                <div style="font-size: 1.1em">✅ Correct!</div>
+                <div style="font-size: 0.95em">+${pointsText}</div>
+                <div style="font-size:0.85em; margin-top:4px">Time: ${submissionTime.toFixed(1)}s | Total Score: ${this.score}</div>
+            `;
         } else {
             statusEl.className = 'error';
             const penalty = scoreChange < 0 ? Math.abs(scoreChange) : 0;
-            statusEl.innerHTML = `\n                <div style="font-size: 1.1em">❌ Incorrect</div>\n                <div style="font-size: 0.9em">Correct answer: ${scenario.options[scenario.correctAnswer]}</div>\n                <div style="font-size:0.85em; margin-top:4px">${penalty > 0 ? `-${penalty} points` : 'No penalty'} | Total Score: ${this.score}</div>\n            `;
+            statusEl.innerHTML = `
+                <div style="font-size: 1.1em">❌ Incorrect</div>
+                <div style="font-size: 0.9em">Correct answer: ${scenario.options[scenario.correctAnswer]}</div>
+                <div style="font-size:0.85em; margin-top:4px">${penalty > 0 ? `-${penalty} points` : 'No penalty'} | Total Score: ${this.score}</div>
+            `;
         }
         this.updateScoreDisplay();
     }
@@ -430,7 +451,10 @@ export class SquidGameController {
             this.answerLocked = true;
             if (this.dom.submissionStatus) {
                 this.dom.submissionStatus.className = 'error';
-                this.dom.submissionStatus.innerHTML = `\n                    <div style="font-size:1.1em">⏱️ Time's Up!</div>\n                    <div style="font-size:0.9em; margin-top:6px">No answer submitted. Moving to next round...</div>\n                `;
+                this.dom.submissionStatus.innerHTML = `
+                    <div style="font-size:1.1em">⏱️ Time's Up!</div>
+                    <div style="font-size:0.9em; margin-top:6px">No answer submitted. Moving to next round...</div>
+                `;
             }
             this.disableMCQOptions();
             setTimeout(() => this.advanceToNextRound(), 1200);
@@ -465,7 +489,6 @@ export class SquidGameController {
 
         this.maybeSaveSession();
 
-        // Notify optional hook for post-game actions (e.g., submit score)
         try {
             if (typeof this.onGameEnd === 'function') {
                 const maybePromise = this.onGameEnd();
@@ -486,6 +509,8 @@ export class SquidGameController {
         this.roundResponses = [];
         this.selectedOption = null;
         this.answerLocked = false;
+        this.adminCanStart = false;
+        this.isReady = false;
         clearInterval(this.phaseTimerInterval);
         clearTimeout(this.phaseAutoAdvanceTimeout);
         clearInterval(this.overallTimerInterval);
@@ -494,6 +519,12 @@ export class SquidGameController {
         if (this.dom.startSection) this.dom.startSection.style.display = 'flex';
         if (this.dom.timerText) this.dom.timerText.textContent = '00:00';
         if (this.dom.totalTime) this.dom.totalTime.textContent = '00:00';
+        if (this.dom.startBtn) {
+            this.dom.startBtn.textContent = "I'm Ready";
+            this.dom.startBtn.disabled = false;
+            this.dom.startBtn.style.opacity = '1';
+            this.dom.startBtn.style.cursor = 'pointer';
+        }
         this.updateScoreDisplay();
         this.updateRoundDisplay();
         this.maybeSaveSession();

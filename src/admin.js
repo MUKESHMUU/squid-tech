@@ -14,7 +14,6 @@ const FIREBASE_CONFIG = {
 async function initAdmin() {
     document.documentElement.classList.add('js-ready');
 
-    // Note: adminEmail input is kept in HTML but hidden — we ignore it for auth
     const adminPassword = getElement('#adminPassword', false);
     const adminLoginBtn = getElement('#adminLoginBtn', false);
     const adminLogoutBtn = getElement('#adminLogoutBtn', false);
@@ -31,17 +30,60 @@ async function initAdmin() {
         adminEmail.closest && adminEmail.closest('p') && (adminEmail.closest('p').style.display = 'none');
     }
 
-    // Hide the "admins are defined in Firestore" hint — no longer relevant
+    // Hide the "admins are defined in Firestore" hint
     const adminHint = document.querySelector('.admin-hint');
     if (adminHint) adminHint.style.display = 'none';
 
-    // Initialize Firebase (single call)
+    // ── Inject Game Control Section into the page ──────────────────────────────
+    let gameControlSection = document.querySelector('#gameControlSection');
+    if (!gameControlSection) {
+        gameControlSection = document.createElement('div');
+        gameControlSection.id = 'gameControlSection';
+        gameControlSection.style.cssText = `
+            margin: 24px 0 0 0;
+            padding: 18px 20px;
+            background: rgba(255,255,255,0.07);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        `;
+        gameControlSection.innerHTML = `
+            <span style="font-weight:700;font-size:1rem;color:#fff;margin-right:4px;">🎮 Game Control</span>
+            <button id="startAllBtn" style="
+                padding: 10px 28px;
+                background: linear-gradient(135deg, #22c55e, #16a34a);
+                color: #fff; border: none; border-radius: 8px;
+                font-size: 1rem; font-weight: 700; cursor: pointer;
+                letter-spacing: 0.5px;
+            ">▶ Start Game for All</button>
+            <button id="resetAllBtn" style="
+                padding: 10px 28px;
+                background: linear-gradient(135deg, #ef4444, #b91c1c);
+                color: #fff; border: none; border-radius: 8px;
+                font-size: 1rem; font-weight: 700; cursor: pointer;
+                letter-spacing: 0.5px;
+            ">⏹ Reset / Stop</button>
+            <span id="gameControlStatus" style="color:#a3e635;font-size:0.9rem;font-weight:600;margin-left:8px;"></span>
+        `;
+        const adminPanel = document.querySelector('.admin-panel') || document.querySelector('main') || document.body;
+        adminPanel.appendChild(gameControlSection);
+    }
+
+    const startAllBtn = document.querySelector('#startAllBtn');
+    const resetAllBtn = document.querySelector('#resetAllBtn');
+    const gameControlStatus = document.querySelector('#gameControlStatus');
+
+    // ── Initialize Firebase ────────────────────────────────────────────────────
     const { db } = await FB.initFirebase(FIREBASE_CONFIG);
     if (!db && adminStatus) adminStatus.textContent = 'Firebase not available.';
 
     let joinRequestsUnsub = null;
     let invitesUnsub = null;
 
+    // ── Render helpers ─────────────────────────────────────────────────────────
     function renderInvites(items) {
         if (!inviteList) return;
         inviteList.innerHTML = '';
@@ -116,6 +158,7 @@ async function initAdmin() {
         }
     }
 
+    // ── Auth handlers ──────────────────────────────────────────────────────────
     if (adminLoginBtn) {
         adminLoginBtn.addEventListener('click', async () => {
             const password = adminPassword ? adminPassword.value : '';
@@ -133,7 +176,6 @@ async function initAdmin() {
         });
     }
 
-    // Allow pressing Enter in password field to log in
     if (adminPassword) {
         adminPassword.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && adminLoginBtn && !adminLoginBtn.disabled) {
@@ -149,6 +191,7 @@ async function initAdmin() {
         });
     }
 
+    // ── Invite handler ─────────────────────────────────────────────────────────
     if (addInviteBtn) {
         addInviteBtn.addEventListener('click', async () => {
             const name = inviteName ? inviteName.value.trim() : '';
@@ -160,6 +203,44 @@ async function initAdmin() {
         });
     }
 
+    // ── Game Control handlers ──────────────────────────────────────────────────
+    if (startAllBtn) {
+        startAllBtn.addEventListener('click', async () => {
+            try {
+                startAllBtn.disabled = true;
+                startAllBtn.textContent = 'Starting...';
+                await FB.setGameStart(true);
+                if (gameControlStatus) gameControlStatus.textContent = '✅ Game started for all players!';
+                startAllBtn.textContent = '▶ Start Game for All';
+                startAllBtn.disabled = false;
+            } catch (e) {
+                console.error(e);
+                if (gameControlStatus) gameControlStatus.textContent = '❌ Failed to start.';
+                startAllBtn.textContent = '▶ Start Game for All';
+                startAllBtn.disabled = false;
+            }
+        });
+    }
+
+    if (resetAllBtn) {
+        resetAllBtn.addEventListener('click', async () => {
+            try {
+                resetAllBtn.disabled = true;
+                resetAllBtn.textContent = 'Resetting...';
+                await FB.resetGameStart();
+                if (gameControlStatus) gameControlStatus.textContent = '🔄 Game reset. Players can start fresh.';
+                resetAllBtn.textContent = '⏹ Reset / Stop';
+                resetAllBtn.disabled = false;
+            } catch (e) {
+                console.error(e);
+                if (gameControlStatus) gameControlStatus.textContent = '❌ Failed to reset.';
+                resetAllBtn.textContent = '⏹ Reset / Stop';
+                resetAllBtn.disabled = false;
+            }
+        });
+    }
+
+    // ── Auth state listener ────────────────────────────────────────────────────
     await FB.onAdminAuthStateChanged(async user => {
         setAdminUi(user);
         if (joinRequestsUnsub) joinRequestsUnsub();

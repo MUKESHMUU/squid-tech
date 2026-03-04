@@ -229,3 +229,30 @@ export async function listenInvites(onUpdate) {
     }, err => console.error('Invite listener error', err));
     return unsubscribe;
 }
+
+// ─── Global Game Control ──────────────────────────────────────────────────────
+
+export async function setGameStart(started) {
+    if (_initPromise) await _initPromise;
+    if (!initialized || !db) throw new Error('Firebase not initialized');
+    const { doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
+    await setDoc(doc(db, 'gameControl', 'state'), {
+        started: !!started,
+        updatedAt: serverTimestamp()
+    });
+}
+
+export async function resetGameStart() {
+    return setGameStart(false);
+}
+
+export async function listenGameStart(onUpdate) {
+    if (_initPromise) await _initPromise;
+    if (!initialized || !db) return () => {};
+    const { doc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
+    const unsubscribe = onSnapshot(doc(db, 'gameControl', 'state'), snap => {
+        if (!snap.exists()) return onUpdate({ started: false });
+        onUpdate(snap.data());
+    }, err => console.error('Game control listener error', err));
+    return unsubscribe;
+}
