@@ -1,34 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() {
-      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+
+    // Allow full access for development
+    match /{document=**} {
+      allow read, write: if true;
     }
 
-    match /leaderboard/{docId} {
-      allow read: if true;
-      allow create: if request.resource.data.name is string
-        && request.resource.data.score is number
-        && request.resource.data.score >= 0
-        && request.resource.data.score <= 200;
-      allow update, delete: if false;
-    }
-
-    match /invites/{inviteId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /joinRequests/{requestId} {
-      allow read: if true;
-      allow create: if request.resource.data.name is string
-        && request.resource.data.status == 'pending';
-      allow update, delete: if isAdmin();
-    }
-
-    match /admins/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if false;
-    }
   }
 }

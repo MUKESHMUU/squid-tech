@@ -5,12 +5,13 @@ import { renderLeaderboard } from './ui/leaderboard.js';
 import { SessionManager } from './core/sessionManager.js';
 
 const FIREBASE_CONFIG = {
-    apiKey: 'AIzaSyBvv2LWEE7Qgj437Iwv4v0guV7bPCvQp38',
-    authDomain: 'squid-tech-4eaf8.firebaseapp.com',
-    projectId: 'squid-tech-4eaf8',
-    storageBucket: 'squid-tech-4eaf8.firebasestorage.app',
-    messagingSenderId: '1079894135221',
-    appId: '1:1079894135221:web:d3744bfa469a07960e89fc'
+  apiKey: "AIzaSyAR72Z6w2rHaSVo41LV7tcCMxiPvceZrYA",
+  authDomain: "squid-tech-main.firebaseapp.com",
+  projectId: "squid-tech-main",
+  storageBucket: "squid-tech-main.firebasestorage.app",
+  messagingSenderId: "1036086289694",
+  appId: "1:1036086289694:web:0a04a7646b43f73b1fd50f",
+  measurementId: "G-WVV9B12B97"
 };
 
 async function initApp() {
@@ -66,7 +67,7 @@ async function initApp() {
 
     updateStartEnabled();
 
-    // Initialize Firebase
+    // Initialize Firebase (single call)
     const { db } = await FB.initFirebase(FIREBASE_CONFIG);
     if (!db) console.info('Firebase not available — leaderboard disabled until configured.');
 

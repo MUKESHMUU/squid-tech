@@ -3,22 +3,20 @@ let app = null;
 let db = null;
 let initialized = false;
 let _lastSubmitAt = 0;
+let _initPromise = null;
 
 // ─── Admin Auth (no Firebase Auth — simple password) ──────────────────────────
-const ADMIN_PASSWORD = 'squidtech2025'; // ← Change this to your desired password
+const ADMIN_PASSWORD = 'squidtech2025';
 const ADMIN_SESSION_KEY = 'squid_admin_session';
 
-// Fake "user" object so admin.js gets a consistent shape
 function makeAdminUser() {
     return { uid: 'admin', email: 'admin@squidtech' };
 }
 
 export async function signInAdmin(email, password) {
-    // email param ignored — password-only check
     if (!password) throw new Error('Password required');
     if (password !== ADMIN_PASSWORD) throw new Error('Incorrect password');
     localStorage.setItem(ADMIN_SESSION_KEY, '1');
-    // Notify any listeners
     _notifyAuthListeners(makeAdminUser());
     return { user: makeAdminUser() };
 }
@@ -28,7 +26,6 @@ export async function signOutAdmin() {
     _notifyAuthListeners(null);
 }
 
-// Simple pub/sub to mimic onAuthStateChanged
 const _authListeners = new Set();
 
 function _notifyAuthListeners(user) {
@@ -38,8 +35,9 @@ function _notifyAuthListeners(user) {
 export async function onAdminAuthStateChanged(callback) {
     if (!callback) return () => {};
     _authListeners.add(callback);
-    // Fire immediately with current state (matches Firebase behaviour)
     const isLoggedIn = localStorage.getItem(ADMIN_SESSION_KEY) === '1';
+    // Wait for Firebase to be ready before firing the callback
+    if (_initPromise) await _initPromise;
     setTimeout(() => callback(isLoggedIn ? makeAdminUser() : null), 0);
     return () => _authListeners.delete(callback);
 }
@@ -47,17 +45,25 @@ export async function onAdminAuthStateChanged(callback) {
 // ─── Firebase / Firestore ─────────────────────────────────────────────────────
 export async function initFirebase(config) {
     if (initialized) return { app, db };
-    try {
-        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js');
-        app = initializeApp(config);
-        const firestoreMod = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
-        db = firestoreMod.getFirestore(app);
-        initialized = true;
-        return { app, db };
-    } catch (err) {
-        console.error('Firebase initialization failed', err);
-        return { app: null, db: null };
-    }
+    // If already initializing, wait for it
+    if (_initPromise) return _initPromise;
+
+    _initPromise = (async () => {
+        try {
+            const { initializeApp } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js');
+            app = initializeApp(config);
+            const firestoreMod = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
+            db = firestoreMod.getFirestore(app);
+            initialized = true;
+            return { app, db };
+        } catch (err) {
+            console.error('Firebase initialization failed', err);
+            _initPromise = null;
+            return { app: null, db: null };
+        }
+    })();
+
+    return _initPromise;
 }
 
 function normalizeName(name) {
@@ -94,6 +100,7 @@ export async function submitScore({ name, score, reactionTime }) {
 }
 
 export async function listenTopScores(onUpdate, limitCount = 10) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) return () => {};
     try {
         const { collection, query, orderBy, limit, onSnapshot } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
@@ -111,6 +118,7 @@ export async function listenTopScores(onUpdate, limitCount = 10) {
 }
 
 export async function requestJoin(name) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) throw new Error('Firebase not initialized');
     const cleanName = String(name || '').trim();
     if (!cleanName) throw new Error('Name required');
@@ -132,6 +140,7 @@ export async function requestJoin(name) {
 }
 
 export async function listenJoinStatus(name, onUpdate) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) return () => {};
     if (!name) return () => {};
     const { doc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
@@ -145,6 +154,7 @@ export async function listenJoinStatus(name, onUpdate) {
 }
 
 export async function listenJoinRequests(onUpdate) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) return () => {};
     const { collection, query, where, onSnapshot } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
     const q = query(collection(db, 'joinRequests'), where('status', '==', 'pending'));
@@ -157,6 +167,7 @@ export async function listenJoinRequests(onUpdate) {
 }
 
 export async function approveJoin(name, adminEmail) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) throw new Error('Firebase not initialized');
     const { doc, serverTimestamp, setDoc } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
     const id = normalizeName(name);
@@ -170,6 +181,7 @@ export async function approveJoin(name, adminEmail) {
 }
 
 export async function denyJoin(name, adminEmail) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) throw new Error('Firebase not initialized');
     const { doc, serverTimestamp, setDoc } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
     const id = normalizeName(name);
@@ -183,6 +195,7 @@ export async function denyJoin(name, adminEmail) {
 }
 
 export async function addInvite(name, adminEmail) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) throw new Error('Firebase not initialized');
     const cleanName = String(name || '').trim();
     if (!cleanName) throw new Error('Invite name required');
@@ -196,6 +209,7 @@ export async function addInvite(name, adminEmail) {
 }
 
 export async function removeInvite(name) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) throw new Error('Firebase not initialized');
     const cleanName = String(name || '').trim();
     if (!cleanName) return;
@@ -205,6 +219,7 @@ export async function removeInvite(name) {
 }
 
 export async function listenInvites(onUpdate) {
+    if (_initPromise) await _initPromise;
     if (!initialized || !db) return () => {};
     const { collection, onSnapshot } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
     const unsubscribe = onSnapshot(collection(db, 'invites'), snap => {
