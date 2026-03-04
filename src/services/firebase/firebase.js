@@ -104,7 +104,7 @@ export async function listenTopScores(onUpdate, limitCount = 10) {
     if (!initialized || !db) return () => {};
     try {
         const { collection, query, orderBy, limit, onSnapshot } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
-        const q = query(collection(db, 'leaderboard'), orderBy('score', 'desc'), orderBy('reactionTime', 'asc'), limit(limitCount));
+        const q = query(collection(db, 'leaderboard'), orderBy('score', 'desc'), limit(limitCount));
         const unsubscribe = onSnapshot(q, snap => {
             const items = [];
             snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
@@ -228,6 +228,25 @@ export async function listenInvites(onUpdate) {
         onUpdate(items);
     }, err => console.error('Invite listener error', err));
     return unsubscribe;
+}
+
+// ─── Live Score Upsert (updates same doc per player during game) ─────────────
+
+export async function upsertLiveScore({ name, score, reactionTime }) {
+    if (_initPromise) await _initPromise;
+    if (!initialized || !db) throw new Error('Firebase not initialized');
+    if (!name || typeof name !== 'string' || name.trim() === '') throw new Error('Name required');
+    if (!Number.isFinite(score)) throw new Error('Score must be numeric');
+
+    const { doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js');
+    const id = normalizeName(name);
+    await setDoc(doc(db, 'leaderboard', id), {
+        name: name.trim(),
+        score: Number(score),
+        reactionTime: Number(reactionTime) || null,
+        date: serverTimestamp()
+    }, { merge: true });
+    return { id };
 }
 
 // ─── Global Game Control ──────────────────────────────────────────────────────

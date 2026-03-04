@@ -359,7 +359,7 @@ export class SquidGameController {
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
         const isCorrect = this.selectedOption === scenario.correctAnswer;
         const scoreChange = this.calculateScore(isCorrect, submissionTime);
-        this.score = Math.max(0, this.score + scoreChange);
+        this.score = Math.max(0, this.score + scoreChange); // never go below 0
 
         this.showFeedback(isCorrect, submissionTime, scoreChange, scenario);
 
@@ -395,18 +395,17 @@ export class SquidGameController {
         };
 
         if (!isCorrect) {
-            if (this.score >= 200) {
-                const delta = 200 - this.score;
-                return validateResult(delta);
-            }
+            // If score is 0, stay at 0
             if (this.score === 0) return 0;
-            return validateResult(-this.score);
+            // Deduct 200 from current score, minimum 0
+            return validateResult(-200);
         }
 
+        // Correct answer scoring
         let points = 0;
-        if (submissionTime <= 15) points = 1500;
-        else if (submissionTime <= 30) points = 1300;
-        else points = 0;
+        if (submissionTime <= 15) points = 1500;       // answered within 15s
+        else if (submissionTime <= 30) points = 1300;  // answered 15s-30s
+        else points = 0;                                // too slow
 
         return validateResult(points);
     }

@@ -165,7 +165,28 @@ async function initApp() {
         window._leaderboardUnsubscribe = unsubscribe;
     }
 
-    // Hook into game end to submit score
+    // ── Live score update after every round ──────────────────────────────────
+    const _liveScoreUpdate = async () => {
+        const name = localStorage.getItem('squid_player_name') || '';
+        if (!name || !db) return;
+        const responses = controller.roundResponses || [];
+        const times = responses.map(r => r.submissionTime).filter(t => Number.isFinite(t) && t > 0);
+        const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : null;
+        try {
+            await FB.upsertLiveScore({ name, score: controller.score, reactionTime: avg });
+        } catch (e) {
+            console.warn('Live score update failed', e);
+        }
+    };
+
+    // Patch advanceToNextRound to push live score after each round
+    const _origAdvance = controller.advanceToNextRound.bind(controller);
+    controller.advanceToNextRound = function() {
+        _origAdvance();
+        _liveScoreUpdate();
+    };
+
+    // Hook into game end to do final score save
     controller.onGameEnd = async () => {
         const name = localStorage.getItem('squid_player_name') || '';
         if (!name) {
@@ -180,7 +201,8 @@ async function initApp() {
             if (controller.dom && controller.dom.submissionStatus) {
                 controller.dom.submissionStatus.textContent = 'Saving score...';
             }
-            const res = await FB.submitScore({ name, score: controller.score, reactionTime: avg });
+            // Final upsert with definitive score
+            const res = await FB.upsertLiveScore({ name, score: controller.score, reactionTime: avg });
             controller.lastSubmissionId = res?.id || null;
             if (controller.dom && controller.dom.submissionStatus) {
                 controller.dom.submissionStatus.textContent = 'Score saved!';
