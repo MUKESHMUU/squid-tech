@@ -124,7 +124,12 @@ export class SquidGameController {
 
     // Called ONLY by main.js when admin fires the start signal
     unlockAndStart() {
-        this.adminCanStart = false;
+        this.adminCanStart = true;
+        this.isReady = true; // force ready even if player didn't click
+        // Reset button state so startGame() can hide startSection cleanly
+        if (this.dom.startBtn) {
+            this.dom.startBtn.disabled = false;
+        }
         this.startGame();
     }
 

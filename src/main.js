@@ -138,13 +138,14 @@ async function initApp() {
     // ── Listen for admin global game start signal ──────────────────────────────
     if (db) {
         await FB.listenGameStart(data => {
-            if (data?.started === true && isApproved && getPlayerName()) {
-                // Admin fired — unlock controller and launch
-                setAccessStatus('🚀 Game is starting!', 'success');
-                setTimeout(() => {
-                    controller.unlockAndStart();
-                }, 300);
-
+            if (data?.started === true) {
+                // Admin fired — unlock and launch for all approved players
+                if (isApproved && getPlayerName()) {
+                    setAccessStatus('🚀 Game is starting!', 'success');
+                    setTimeout(() => {
+                        controller.unlockAndStart();
+                    }, 500);
+                }
             } else if (data?.started === false) {
                 // Admin reset — re-lock everything
                 controller.adminCanStart = false;
