@@ -323,16 +323,27 @@ export class SquidGameController {
         setTimeout(() => this.advanceToNextRound(), 2000);
     }
 
-    calculateScore(isCorrect, submissionTime) {
-        if (!isCorrect) {
-            if (this.score === 0) return 0;        // score is 0 → stay 0
-            if (this.score >= 100) return -100;     // score >= 100 → minus 100
-            return -this.score;                     // score < 100 → reduce to 0
+    // ==========================================
+    // SCORE CALCULATION
+    // noAnswer = true  → player did not answer in time
+    // isCorrect        → player answered correctly
+    // ==========================================
+    calculateScore(isCorrect, submissionTime, noAnswer = false) {
+        // No answer submitted
+        if (noAnswer) {
+            if (this.score >= 100) return -100;  // score ≥ 100 → -100
+            return 0;                             // score < 100 → no change
         }
 
-        if (submissionTime <= 15) return 1500;      // correct within 15s → +1500
-        if (submissionTime <= 30) return 1300;      // correct 15-30s → +1300
-        return 0;                                   // too slow → 0
+        // Wrong answer
+        if (!isCorrect) {
+            return -200;  // always -200 (Math.max(0,...) in submitAnswer prevents going below 0)
+        }
+
+        // Correct answer
+        if (submissionTime <= 15) return 1500;   // correct within 15s → +1500
+        if (submissionTime <= 30) return 1300;   // correct 15–30s → +1300
+        return 0;                                // too slow → 0
     }
 
     showFeedback(isCorrect, submissionTime, scoreChange, scenario) {
@@ -393,10 +404,17 @@ export class SquidGameController {
     endRedLight() {
         if (!this.answerLocked && this.currentPhase === 'red') {
             this.answerLocked = true;
+
+            // Apply no-answer penalty
+            const scoreChange = this.calculateScore(false, 0, true);
+            this.score = Math.max(0, this.score + scoreChange);
+            this.updateScoreDisplay();
+
             if (this.dom.submissionStatus) {
                 this.dom.submissionStatus.className = 'error';
+                const penaltyText = scoreChange < 0 ? ` (-${Math.abs(scoreChange)} points)` : '';
                 this.dom.submissionStatus.innerHTML = `
-                    <div style="font-size:1.2em;">⏱️ Time's Up!</div>
+                    <div style="font-size:1.2em;">⏱️ Time's Up!${penaltyText}</div>
                     <div style="font-size:0.9em;margin-top:5px;">No answer submitted. Moving to next round...</div>
                 `;
             }
