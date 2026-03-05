@@ -1,5 +1,6 @@
 import * as FB from './services/firebase/firebase.js';
-import { getElement } from './ui.js';
+import { getElement, setLoadingLeaderboard } from './ui.js';
+import { renderLeaderboard } from './ui/leaderboard.js';
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAR72Z6w2rHaSVo41LV7tcCMxiPvceZrYA",
@@ -22,19 +23,18 @@ async function initAdmin() {
     const addInviteBtn = getElement('#addInviteBtn', false);
     const inviteList = getElement('#inviteList', false);
     const joinRequestsList = getElement('#joinRequestsList', false);
+    const leaderboardList = getElement('#leaderboardList', false);
 
-    // Hide the email field — password only
     const adminEmail = getElement('#adminEmail', false);
     if (adminEmail) {
         adminEmail.style.display = 'none';
         adminEmail.closest && adminEmail.closest('p') && (adminEmail.closest('p').style.display = 'none');
     }
 
-    // Hide the "admins are defined in Firestore" hint
     const adminHint = document.querySelector('.admin-hint');
     if (adminHint) adminHint.style.display = 'none';
 
-    // ── Inject Game Control Section into the page ──────────────────────────────
+    // ── Inject Game Control Section ────────────────────────────────────────────
     let gameControlSection = document.querySelector('#gameControlSection');
     if (!gameControlSection) {
         gameControlSection = document.createElement('div');
@@ -82,6 +82,14 @@ async function initAdmin() {
 
     let joinRequestsUnsub = null;
     let invitesUnsub = null;
+
+    // ── Live Leaderboard (admin only) ──────────────────────────────────────────
+    if (db && leaderboardList) {
+        setLoadingLeaderboard(true, leaderboardList);
+        await FB.listenTopScores(items => {
+            renderLeaderboard(leaderboardList, items, null);
+        }, 20);
+    }
 
     // ── Render helpers ─────────────────────────────────────────────────────────
     function renderInvites(items) {

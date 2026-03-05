@@ -1,6 +1,7 @@
 import { SquidGameController } from './gameController.js';
 import * as FB from './services/firebase/firebase.js';
-import { getElement, setLoadingLeaderboard, renderLeaderboard } from './ui.js'; // FIX: merged renderLeaderboard import here, removed broken './ui/leaderboard.js' import
+import { getElement, setLoadingLeaderboard } from './ui.js';
+import { renderLeaderboard } from './ui/leaderboard.js';
 import { SessionManager } from './core/sessionManager.js';
 
 const FIREBASE_CONFIG = {
@@ -169,7 +170,10 @@ async function initApp() {
         const name = localStorage.getItem('squid_player_name') || '';
         if (!name || !db) return;
         const responses = controller.roundResponses || [];
-        const times = responses.map(r => r.submissionTime).filter(t => Number.isFinite(t) && t > 0);
+        // Only use correct answer submission times for avg reaction time
+        const times = responses
+            .filter(r => r.isCorrect && Number.isFinite(r.submissionTime) && r.submissionTime > 0)
+            .map(r => r.submissionTime);
         const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : null;
         try {
             await FB.upsertLiveScore({ name, score: controller.score, reactionTime: avg });

@@ -125,11 +125,8 @@ export class SquidGameController {
     // Called ONLY by main.js when admin fires the start signal
     unlockAndStart() {
         this.adminCanStart = true;
-        this.isReady = true; // force ready even if player didn't click
-        // Reset button state so startGame() can hide startSection cleanly
-        if (this.dom.startBtn) {
-            this.dom.startBtn.disabled = false;
-        }
+        this.isReady = true;
+        if (this.dom.startBtn) this.dom.startBtn.disabled = false;
         this.startGame();
     }
 
@@ -238,12 +235,9 @@ export class SquidGameController {
             return;
         }
         // Hard block — admin MUST unlock via unlockAndStart()
-        if (!this.adminCanStart) {
-            return;
-        }
-        if (this.startGuard && !this.startGuard()) {
-            return;
-        }
+        if (!this.adminCanStart) return;
+        if (this.startGuard && !this.startGuard()) return;
+
         this.gameStarted = true;
         this.gameOver = false;
         this.currentRoundIndex = 0;
@@ -359,7 +353,7 @@ export class SquidGameController {
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
         const isCorrect = this.selectedOption === scenario.correctAnswer;
         const scoreChange = this.calculateScore(isCorrect, submissionTime);
-        this.score = Math.max(0, this.score + scoreChange); // never go below 0
+        this.score = Math.max(0, this.score + scoreChange);
 
         this.showFeedback(isCorrect, submissionTime, scoreChange, scenario);
 
@@ -381,33 +375,15 @@ export class SquidGameController {
     }
 
     calculateScore(isCorrect, submissionTime) {
-        const validateResult = (value) => {
-            if (!Number.isFinite(value)) {
-                console.warn('calculateScore produced non-finite value:', value);
-                return 0;
-            }
-            let v = Math.trunc(value);
-            if (Math.abs(v) > Number.MAX_SAFE_INTEGER) {
-                console.warn('Score value overflow detected:', v);
-                v = Math.sign(v) * Number.MAX_SAFE_INTEGER;
-            }
-            return v;
-        };
-
         if (!isCorrect) {
-            // If score is 0, stay at 0
-            if (this.score === 0) return 0;
-            // Deduct 200 from current score, minimum 0
-            return validateResult(-200);
+            if (this.score === 0) return 0;       // score is 0 → stay 0
+            if (this.score >= 100) return -100;    // score >= 100 → minus 100
+            return -this.score;                    // score < 100 → reduce to 0
         }
 
-        // Correct answer scoring
-        let points = 0;
-        if (submissionTime <= 15) points = 1500;       // answered within 15s
-        else if (submissionTime <= 30) points = 1300;  // answered 15s-30s
-        else points = 0;                                // too slow
-
-        return validateResult(points);
+        if (submissionTime <= 15) return 1500;     // correct within 15s → +1500
+        if (submissionTime <= 30) return 1300;     // correct 15-30s → +1300
+        return 0;                                  // too slow → 0
     }
 
     showFeedback(isCorrect, submissionTime, scoreChange, scenario) {
@@ -529,6 +505,8 @@ export class SquidGameController {
             this.dom.startBtn.style.opacity = '1';
             this.dom.startBtn.style.cursor = 'pointer';
         }
+        const hint = document.querySelector('#adminStartHint');
+        if (hint) hint.textContent = '⚡ Game will start automatically when admin starts it.';
         this.updateScoreDisplay();
         this.updateRoundDisplay();
         this.maybeSaveSession();

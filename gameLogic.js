@@ -1,15 +1,14 @@
 // ==========================================
 // SQUID TECH: Code to Survive - Game Logic
-// FIXED VERSION - All bugs resolved
 // ==========================================
 
-export class SquidGameController {  // FIX 1: added 'export' so main.js import works
+export class SquidGameController {
     constructor() {
         // Game State
         this.gameStarted = false;
         this.gameOver = false;
         this.currentRoundIndex = 0;
-        this.currentPhase = null; // 'green' or 'red'
+        this.currentPhase = null;
         this.score = 0;
         this.roundResponses = [];
         this.answerSubmittedTime = null;
@@ -17,13 +16,15 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         this.greenLightEndTime = null;
         this.selectedOption = null;
         this.answerLocked = false;
+        this.adminCanStart = false; // only true when admin fires signal
+        this.isReady = false;       // player clicked "I'm Ready"
 
         // Timers
         this.overallStartTime = null;
         this.phaseTimerInterval = null;
         this.phaseAutoAdvanceTimeout = null;
         this.greenLightDuration = 0;
-        this.redLightDuration = 30; // Fixed 30 seconds
+        this.redLightDuration = 30;
         this.overallTimerInterval = null;
 
         // UI References
@@ -51,12 +52,9 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
             mcqContainer: document.querySelector('.mcq-container')
         };
 
-        // BUG FIX #1: Null-check all DOM elements before attaching listeners
-        // Previously would throw if any element was missing
         this.attachEventListeners();
     }
 
-    // FIX 2: These 3 methods added so main.js calls don't crash on init
     setStartGuard(fn) {
         this._startGuard = fn;
     }
@@ -65,15 +63,39 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         this.sessionManager = sm;
     }
 
+    // Called ONLY by main.js when admin fires the start signal
     unlockAndStart() {
         this.adminCanStart = true;
+        this.isReady = true;
+        if (this.dom.startBtn) this.dom.startBtn.disabled = false;
         this.startGame();
     }
 
     attachEventListeners() {
-        // BUG FIX #2: Guard against missing startBtn / restartBtn (null crash on load)
         if (this.dom.startBtn) {
-            this.dom.startBtn.addEventListener('click', () => this.startGame());
+            // Rename to "I'm Ready" — clicking ONLY marks player as ready, never starts game
+            this.dom.startBtn.textContent = "I'm Ready";
+
+            // Inject hint line below button
+            if (!document.querySelector('#adminStartHint')) {
+                const hint = document.createElement('p');
+                hint.id = 'adminStartHint';
+                hint.textContent = '⚡ Game will start automatically when admin starts it.';
+                hint.style.cssText = 'margin-top:10px;font-size:0.85rem;color:rgba(255,255,255,0.55);text-align:center;';
+                this.dom.startBtn.parentNode &&
+                    this.dom.startBtn.parentNode.insertBefore(hint, this.dom.startBtn.nextSibling);
+            }
+
+            this.dom.startBtn.addEventListener('click', () => {
+                if (this.isReady) return;
+                this.isReady = true;
+                this.dom.startBtn.textContent = '⏳ Waiting for Admin...';
+                this.dom.startBtn.disabled = true;
+                this.dom.startBtn.style.opacity = '0.7';
+                this.dom.startBtn.style.cursor = 'not-allowed';
+                const hint = document.querySelector('#adminStartHint');
+                if (hint) hint.textContent = '✅ You are marked ready! Game starts when admin launches it.';
+            });
         } else {
             console.error('❌ startBtn not found in DOM');
         }
@@ -84,9 +106,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
             console.error('❌ restartBtn not found in DOM');
         }
 
-        // BUG FIX #3: MCQ options are dynamically rendered via renderMCQ() in ui.js,
-        // so static querySelectorAll here finds nothing on init.
-        // Use event delegation on mcqContainer instead.
         if (this.dom.mcqContainer) {
             this.dom.mcqContainer.addEventListener('click', (e) => {
                 const btn = e.target.closest('.mcq-option');
@@ -99,6 +118,9 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
     }
 
     startGame() {
+        // Hard block — admin MUST unlock via unlockAndStart()
+        if (!this.adminCanStart) return;
+
         console.log('🎮 Game Started!');
         this.gameStarted = true;
         this.gameOver = false;
@@ -116,8 +138,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
     }
 
     startRound() {
-        // BUG FIX #4: Was using GAME_SCENARIOS.length but GAME_SCENARIOS may not be
-        // in scope if gameData.js loads after gameLogic.js. Added guard.
         if (typeof GAME_SCENARIOS === 'undefined' || !Array.isArray(GAME_SCENARIOS)) {
             console.error('❌ GAME_SCENARIOS not loaded. Check script load order in HTML.');
             return;
@@ -145,9 +165,7 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
 
     startGreenLight() {
         this.currentPhase = 'green';
-        console.log('🟢 Green Light Started');
-
-        this.greenLightDuration = Math.floor(Math.random() * 36) + 10; // 10-45 seconds
+        this.greenLightDuration = 15; // Fixed 15 seconds
         this.greenLightEndTime = Date.now() + (this.greenLightDuration * 1000);
 
         this.updatePhaseIndicator('green');
@@ -157,9 +175,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         if (this.dom.answerSection) this.dom.answerSection.style.display = 'none';
 
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
-
-        // BUG FIX #5: Was setting textContent directly which skips XSS safety.
-        // Use safeText pattern (no raw HTML injection possible).
         if (this.dom.scenarioText) this.dom.scenarioText.textContent = scenario.scenario;
 
         this.startPhaseTimer('green', this.greenLightDuration);
@@ -172,7 +187,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
 
     startRedLight() {
         this.currentPhase = 'red';
-        console.log('🔴 Red Light Started');
         this.answerLocked = false;
         this.selectedOption = null;
 
@@ -189,10 +203,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         if (this.dom.questionText) this.dom.questionText.textContent = scenario.question;
 
         this.setupMCQOptions(scenario);
-
-        // BUG FIX #6: greenLightEndTime was being OVERWRITTEN here with Date.now()
-        // which meant submissionTime was calculated from red light start, not green light end.
-        // Renamed to redLightStartTime for clarity and correctness.
         this.redLightStartTime = Date.now();
 
         this.startPhaseTimer('red', this.redLightDuration);
@@ -204,26 +214,21 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
     }
 
     setupMCQOptions(scenario) {
-        // BUG FIX #7: Was using static querySelectorAll('.mcq-option') which returns
-        // nothing if options are dynamically rendered. Now uses mcqContainer + renderMCQ.
         if (!this.dom.mcqContainer) return;
-
         this.dom.mcqContainer.innerHTML = '';
         scenario.options.forEach((text, idx) => {
             const btn = document.createElement('button');
             btn.className = 'mcq-option';
             btn.type = 'button';
             btn.dataset.option = String(idx);
-            btn.dataset.optionIndex = String(idx); // backwards compat
+            btn.dataset.optionIndex = String(idx);
             btn.textContent = text;
             this.dom.mcqContainer.appendChild(btn);
         });
     }
 
     startPhaseTimer(phase, duration) {
-        if (this.phaseTimerInterval) {
-            clearInterval(this.phaseTimerInterval);
-        }
+        if (this.phaseTimerInterval) clearInterval(this.phaseTimerInterval);
 
         const startTime = Date.now();
         const totalCircumference = 282.7;
@@ -244,7 +249,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
                 const progress = clampedElapsed / duration;
                 const offset = totalCircumference * (1 - progress);
                 this.dom.timerProgress.style.strokeDashoffset = offset;
-
                 if (phase === 'green') {
                     this.dom.timerProgress.classList.add('green');
                     this.dom.timerProgress.classList.remove('red');
@@ -256,21 +260,14 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         };
 
         updateTimer();
-
         this.phaseTimerInterval = setInterval(() => {
-            if (Date.now() - startTime >= duration * 1000) {
-                clearInterval(this.phaseTimerInterval);
-            } else {
-                updateTimer();
-            }
+            if (Date.now() - startTime >= duration * 1000) clearInterval(this.phaseTimerInterval);
+            else updateTimer();
         }, 100);
     }
 
     startOverallTimer() {
-        if (this.overallTimerInterval) {
-            clearInterval(this.overallTimerInterval);
-        }
-
+        if (this.overallTimerInterval) clearInterval(this.overallTimerInterval);
         this.overallTimerInterval = setInterval(() => {
             if (this.gameStarted && !this.gameOver) {
                 const elapsed = Math.floor((Date.now() - this.overallStartTime) / 1000);
@@ -285,43 +282,27 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
     }
 
     selectOption(optionIndex) {
-        if (this.answerLocked || this.currentPhase !== 'red') {
-            return;
-        }
-
+        if (this.answerLocked || this.currentPhase !== 'red') return;
         this.selectedOption = optionIndex;
-
-        // BUG FIX #8: Was using static querySelectorAll - now queries within mcqContainer
         const options = this.dom.mcqContainer
             ? this.dom.mcqContainer.querySelectorAll('.mcq-option')
             : [];
-
         options.forEach((btn, index) => {
             btn.classList.remove('selected');
-            if (index === optionIndex) {
-                btn.classList.add('selected');
-            }
+            if (index === optionIndex) btn.classList.add('selected');
         });
-
         this.submitAnswer();
     }
 
     submitAnswer() {
-        if (this.selectedOption === null || this.answerLocked) {
-            console.log('⚠️ No answer selected or already submitted');
-            return;
-        }
+        if (this.selectedOption === null || this.answerLocked) return;
 
         this.answerLocked = true;
-
-        // BUG FIX #9: Was using this.greenLightEndTime which was overwritten in startRedLight().
-        // Now correctly uses this.redLightStartTime set at beginning of red phase.
         const submissionTime = (Date.now() - this.redLightStartTime) / 1000;
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
         const isCorrect = this.selectedOption === scenario.correctAnswer;
         const scoreChange = this.calculateScore(isCorrect, submissionTime);
-        const newScore = this.score + scoreChange;
-        this.score = Math.max(0, newScore);
+        this.score = Math.max(0, this.score + scoreChange);
 
         this.showFeedback(isCorrect, submissionTime, scoreChange, scenario);
 
@@ -336,32 +317,26 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         });
 
         this.disableMCQOptions();
-
         clearInterval(this.phaseTimerInterval);
         clearTimeout(this.phaseAutoAdvanceTimeout);
 
-        setTimeout(() => {
-            this.advanceToNextRound();
-        }, 2000);
+        setTimeout(() => this.advanceToNextRound(), 2000);
     }
 
     calculateScore(isCorrect, submissionTime) {
         if (!isCorrect) {
-            if (this.score >= 200) return -200;
-            if (this.score === 0) return 0;
-            return -this.score;
+            if (this.score === 0) return 0;        // score is 0 → stay 0
+            if (this.score >= 100) return -100;     // score >= 100 → minus 100
+            return -this.score;                     // score < 100 → reduce to 0
         }
 
-        if (submissionTime <= 15) return 1500;
-        if (submissionTime <= 30) return 1300;
-
-        return 0;
+        if (submissionTime <= 15) return 1500;      // correct within 15s → +1500
+        if (submissionTime <= 30) return 1300;      // correct 15-30s → +1300
+        return 0;                                   // too slow → 0
     }
 
     showFeedback(isCorrect, submissionTime, scoreChange, scenario) {
         const statusEl = this.dom.submissionStatus;
-
-        // BUG FIX #10: Was using static querySelectorAll - now scoped to mcqContainer
         const options = this.dom.mcqContainer
             ? this.dom.mcqContainer.querySelectorAll('.mcq-option')
             : [];
@@ -397,8 +372,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         this.updateScoreDisplay();
     }
 
-    // BUG FIX #11: escapeHtml was only in ui.js but used in showFeedback here.
-    // Added locally so gameLogic.js works standalone without ui.js import.
     escapeHtml(str) {
         if (str == null) return '';
         return String(str).replace(/[&<>"'`]/g, s => ({
@@ -408,7 +381,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
     }
 
     disableMCQOptions() {
-        // BUG FIX #12: Scoped to mcqContainer
         const options = this.dom.mcqContainer
             ? this.dom.mcqContainer.querySelectorAll('.mcq-option')
             : [];
@@ -420,9 +392,7 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
 
     endRedLight() {
         if (!this.answerLocked && this.currentPhase === 'red') {
-            console.log('🔴 Red Light Expired - No Answer Submitted');
             this.answerLocked = true;
-
             if (this.dom.submissionStatus) {
                 this.dom.submissionStatus.className = 'error';
                 this.dom.submissionStatus.innerHTML = `
@@ -430,19 +400,14 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
                     <div style="font-size:0.9em;margin-top:5px;">No answer submitted. Moving to next round...</div>
                 `;
             }
-
             this.disableMCQOptions();
-
-            setTimeout(() => {
-                this.advanceToNextRound();
-            }, 2000);
+            setTimeout(() => this.advanceToNextRound(), 2000);
         }
     }
 
     advanceToNextRound() {
         console.log(`✅ Round ${this.currentRoundIndex + 1} Complete`);
         this.currentRoundIndex++;
-
         if (this.currentRoundIndex < GAME_SCENARIOS.length) {
             this.startRound();
         } else {
@@ -478,16 +443,14 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         console.log('=== GAME SUMMARY ===');
         console.log(`Final Score: ${this.score}`);
         console.log(`Total Time: ${minutes}m ${seconds}s`);
-        console.log(`Responses:`, this.roundResponses);
 
-        // FIX 3: Call onGameEnd hook set by main.js — this triggers Firebase score save
+        // Call onGameEnd hook set by main.js — triggers Firebase score save
         if (typeof this.onGameEnd === 'function') {
             this.onGameEnd().catch(err => console.error('onGameEnd failed:', err));
         }
     }
 
     restartGame() {
-        console.log('🔄 Restarting Game...');
         this.gameStarted = false;
         this.gameOver = false;
         this.currentRoundIndex = 0;
@@ -495,7 +458,9 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         this.roundResponses = [];
         this.selectedOption = null;
         this.answerLocked = false;
-        this.redLightStartTime = null; // BUG FIX #14: Reset redLightStartTime on restart
+        this.adminCanStart = false;
+        this.isReady = false;
+        this.redLightStartTime = null;
 
         clearInterval(this.phaseTimerInterval);
         clearTimeout(this.phaseAutoAdvanceTimeout);
@@ -504,6 +469,14 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
         if (this.dom.gameOver) this.dom.gameOver.style.display = 'none';
         if (this.dom.startSection) this.dom.startSection.style.display = 'flex';
         if (this.dom.gameContainer) this.dom.gameContainer.classList.remove('green-glow', 'red-glow');
+        if (this.dom.startBtn) {
+            this.dom.startBtn.textContent = "I'm Ready";
+            this.dom.startBtn.disabled = false;
+            this.dom.startBtn.style.opacity = '1';
+            this.dom.startBtn.style.cursor = 'pointer';
+        }
+        const hint = document.querySelector('#adminStartHint');
+        if (hint) hint.textContent = '⚡ Game will start automatically when admin starts it.';
 
         this.updateScoreDisplay();
         this.updateRoundDisplay();
@@ -517,14 +490,14 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
 
         if (phase === 'green') {
             this.dom.phaseLight.classList.add('green');
-            if (this.dom.phaseText) this.dom.phaseText.textContent = '🟢 Round 2 - Read the Scenario!';
+            if (this.dom.phaseText) this.dom.phaseText.textContent = '🟢 Green Light - Read Carefully!';
             if (this.dom.gameContainer) {
                 this.dom.gameContainer.classList.remove('red-glow');
                 this.dom.gameContainer.classList.add('green-glow');
             }
         } else if (phase === 'red') {
             this.dom.phaseLight.classList.add('red');
-            if (this.dom.phaseText) this.dom.phaseText.textContent = '🔴 Answer the Question!';
+            if (this.dom.phaseText) this.dom.phaseText.textContent = '🔴 Red Light - Answer Now!';
             if (this.dom.gameContainer) {
                 this.dom.gameContainer.classList.remove('green-glow');
                 this.dom.gameContainer.classList.add('red-glow');
@@ -537,8 +510,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
     }
 
     updateRoundDisplay() {
-        // BUG FIX #15: Was showing currentRoundIndex + 1 which shows "31" after last round.
-        // Cap display at GAME_SCENARIOS.length.
         const display = Math.min(this.currentRoundIndex + 1, GAME_SCENARIOS.length);
         if (this.dom.currentRound) this.dom.currentRound.textContent = display;
     }
@@ -546,7 +517,6 @@ export class SquidGameController {  // FIX 1: added 'export' so main.js import w
 
 // Initialize game when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // BUG FIX #16: Guard against double-initialization (e.g. HMR / script loaded twice)
     if (window.game) {
         console.warn('⚠️ Game already initialized. Skipping duplicate init.');
         return;
