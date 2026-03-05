@@ -61,12 +61,13 @@ export class SquidGameController {
             finalScore: get('#finalScore', true),
             finalTime: get('#finalTime', true),
             mcqContainer: get('.mcq-container', true),
-            leaderboardList: get('#leaderboardList', false)
+            leaderboardList: get('#leaderboardList', false) // optional — only on admin page
         };
     }
 
     verifyDomInit() {
-        const missing = Object.entries(this.dom).filter(([, el]) => el === null);
+        // leaderboardList is optional — only present on admin page, not player page
+        const missing = Object.entries(this.dom).filter(([k, el]) => el === null && k !== 'leaderboardList');
         if (missing.length > 0) {
             console.error('DOM initialization failed. Missing required elements:', missing.map(m => m[0]));
             if (this.dom.startBtn) {
