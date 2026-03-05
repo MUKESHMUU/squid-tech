@@ -1,7 +1,6 @@
 import { SquidGameController } from './gameController.js';
 import * as FB from './services/firebase/firebase.js';
-import { getElement, setLoadingLeaderboard } from './ui.js';
-import { renderLeaderboard } from './ui/leaderboard.js';
+import { getElement, setLoadingLeaderboard, renderLeaderboard } from './ui.js'; // FIX: merged renderLeaderboard import here, removed broken './ui/leaderboard.js' import
 import { SessionManager } from './core/sessionManager.js';
 
 const FIREBASE_CONFIG = {

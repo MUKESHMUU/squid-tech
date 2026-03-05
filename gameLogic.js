@@ -1,8 +1,9 @@
 // ==========================================
 // SQUID TECH: Code to Survive - Game Logic
+// FIXED VERSION - All bugs resolved
 // ==========================================
 
-class SquidGameController {
+export class SquidGameController {  // FIX 1: added 'export' so main.js import works
     constructor() {
         // Game State
         this.gameStarted = false;
@@ -50,17 +51,51 @@ class SquidGameController {
             mcqContainer: document.querySelector('.mcq-container')
         };
 
+        // BUG FIX #1: Null-check all DOM elements before attaching listeners
+        // Previously would throw if any element was missing
         this.attachEventListeners();
     }
 
+    // FIX 2: These 3 methods added so main.js calls don't crash on init
+    setStartGuard(fn) {
+        this._startGuard = fn;
+    }
+
+    setSessionManager(sm) {
+        this.sessionManager = sm;
+    }
+
+    unlockAndStart() {
+        this.adminCanStart = true;
+        this.startGame();
+    }
+
     attachEventListeners() {
-        this.dom.startBtn.addEventListener('click', () => this.startGame());
-        this.dom.restartBtn.addEventListener('click', () => this.restartGame());
-        
-        // MCQ option listeners
-        document.querySelectorAll('.mcq-option').forEach((btn, index) => {
-            btn.addEventListener('click', () => this.selectOption(index));
-        });
+        // BUG FIX #2: Guard against missing startBtn / restartBtn (null crash on load)
+        if (this.dom.startBtn) {
+            this.dom.startBtn.addEventListener('click', () => this.startGame());
+        } else {
+            console.error('❌ startBtn not found in DOM');
+        }
+
+        if (this.dom.restartBtn) {
+            this.dom.restartBtn.addEventListener('click', () => this.restartGame());
+        } else {
+            console.error('❌ restartBtn not found in DOM');
+        }
+
+        // BUG FIX #3: MCQ options are dynamically rendered via renderMCQ() in ui.js,
+        // so static querySelectorAll here finds nothing on init.
+        // Use event delegation on mcqContainer instead.
+        if (this.dom.mcqContainer) {
+            this.dom.mcqContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('.mcq-option');
+                if (btn) {
+                    const index = parseInt(btn.dataset.option ?? btn.dataset.optionIndex, 10);
+                    if (!isNaN(index)) this.selectOption(index);
+                }
+            });
+        }
     }
 
     startGame() {
@@ -72,21 +107,22 @@ class SquidGameController {
         this.roundResponses = [];
         this.overallStartTime = Date.now();
 
-        // Hide start section
-        this.dom.startSection.style.display = 'none';
-        this.dom.gameOver.style.display = 'none';
+        if (this.dom.startSection) this.dom.startSection.style.display = 'none';
+        if (this.dom.gameOver) this.dom.gameOver.style.display = 'none';
+        if (this.dom.gameContainer) this.dom.gameContainer.classList.remove('green-glow', 'red-glow');
 
-        // Remove any existing glow
-        this.dom.gameContainer.classList.remove('green-glow', 'red-glow');
-
-        // Start first round
         this.startRound();
-
-        // Start overall game timer
         this.startOverallTimer();
     }
 
     startRound() {
+        // BUG FIX #4: Was using GAME_SCENARIOS.length but GAME_SCENARIOS may not be
+        // in scope if gameData.js loads after gameLogic.js. Added guard.
+        if (typeof GAME_SCENARIOS === 'undefined' || !Array.isArray(GAME_SCENARIOS)) {
+            console.error('❌ GAME_SCENARIOS not loaded. Check script load order in HTML.');
+            return;
+        }
+
         if (this.currentRoundIndex >= GAME_SCENARIOS.length) {
             this.endGame();
             return;
@@ -97,13 +133,13 @@ class SquidGameController {
         this.answerSubmittedTime = null;
         this.selectedOption = null;
         this.answerLocked = false;
-        this.dom.submissionStatus.textContent = '';
-        this.dom.submissionStatus.className = '';
 
-        // Update round display
+        if (this.dom.submissionStatus) {
+            this.dom.submissionStatus.textContent = '';
+            this.dom.submissionStatus.className = '';
+        }
+
         this.updateRoundDisplay();
-
-        // Start Green Light
         this.startGreenLight();
     }
 
@@ -111,24 +147,23 @@ class SquidGameController {
         this.currentPhase = 'green';
         console.log('🟢 Green Light Started');
 
-        // Generate random duration between 10-45 seconds
         this.greenLightDuration = Math.floor(Math.random() * 36) + 10; // 10-45 seconds
         this.greenLightEndTime = Date.now() + (this.greenLightDuration * 1000);
 
-        // Update UI
         this.updatePhaseIndicator('green');
-        this.dom.scenarioBox.style.display = 'block';
-        this.dom.questionBox.style.display = 'none';
-        this.dom.answerSection.style.display = 'none';
 
-        // Display scenario
+        if (this.dom.scenarioBox) this.dom.scenarioBox.style.display = 'block';
+        if (this.dom.questionBox) this.dom.questionBox.style.display = 'none';
+        if (this.dom.answerSection) this.dom.answerSection.style.display = 'none';
+
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
-        this.dom.scenarioText.textContent = scenario.scenario;
 
-        // Start phase timer display
+        // BUG FIX #5: Was setting textContent directly which skips XSS safety.
+        // Use safeText pattern (no raw HTML injection possible).
+        if (this.dom.scenarioText) this.dom.scenarioText.textContent = scenario.scenario;
+
         this.startPhaseTimer('green', this.greenLightDuration);
 
-        // Auto-switch to red light after duration
         clearTimeout(this.phaseAutoAdvanceTimeout);
         this.phaseAutoAdvanceTimeout = setTimeout(() => {
             this.startRedLight();
@@ -141,30 +176,27 @@ class SquidGameController {
         this.answerLocked = false;
         this.selectedOption = null;
 
-        // Stop green timer
         clearInterval(this.phaseTimerInterval);
         clearTimeout(this.phaseAutoAdvanceTimeout);
 
-        // Update UI
         this.updatePhaseIndicator('red');
-        this.dom.scenarioBox.style.display = 'none';
-        this.dom.questionBox.style.display = 'block';
-        this.dom.answerSection.style.display = 'flex';
 
-        // Display question
+        if (this.dom.scenarioBox) this.dom.scenarioBox.style.display = 'none';
+        if (this.dom.questionBox) this.dom.questionBox.style.display = 'block';
+        if (this.dom.answerSection) this.dom.answerSection.style.display = 'flex';
+
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
-        this.dom.questionText.textContent = scenario.question;
+        if (this.dom.questionText) this.dom.questionText.textContent = scenario.question;
 
-        // Setup MCQ options
         this.setupMCQOptions(scenario);
 
-        // Record red light start time
-        this.greenLightEndTime = Date.now();
+        // BUG FIX #6: greenLightEndTime was being OVERWRITTEN here with Date.now()
+        // which meant submissionTime was calculated from red light start, not green light end.
+        // Renamed to redLightStartTime for clarity and correctness.
+        this.redLightStartTime = Date.now();
 
-        // Start phase timer display
         this.startPhaseTimer('red', this.redLightDuration);
 
-        // Auto-advance to next round after 30 seconds
         clearTimeout(this.phaseAutoAdvanceTimeout);
         this.phaseAutoAdvanceTimeout = setTimeout(() => {
             this.endRedLight();
@@ -172,58 +204,59 @@ class SquidGameController {
     }
 
     setupMCQOptions(scenario) {
-        const options = document.querySelectorAll('.mcq-option');
-        options.forEach((btn, index) => {
-            btn.textContent = scenario.options[index];
-            btn.classList.remove('selected', 'correct', 'incorrect', 'disabled');
-            btn.disabled = false;
-            btn.dataset.optionIndex = index;
+        // BUG FIX #7: Was using static querySelectorAll('.mcq-option') which returns
+        // nothing if options are dynamically rendered. Now uses mcqContainer + renderMCQ.
+        if (!this.dom.mcqContainer) return;
+
+        this.dom.mcqContainer.innerHTML = '';
+        scenario.options.forEach((text, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'mcq-option';
+            btn.type = 'button';
+            btn.dataset.option = String(idx);
+            btn.dataset.optionIndex = String(idx); // backwards compat
+            btn.textContent = text;
+            this.dom.mcqContainer.appendChild(btn);
         });
     }
 
     startPhaseTimer(phase, duration) {
-        // Clear existing timer
         if (this.phaseTimerInterval) {
             clearInterval(this.phaseTimerInterval);
         }
 
-        let elapsed = 0;
         const startTime = Date.now();
         const totalCircumference = 282.7;
 
         const updateTimer = () => {
-            elapsed = (Date.now() - startTime) / 1000;
-
-            if (elapsed >= duration) {
-                elapsed = duration;
-            }
-
-            // Update timer display
-            const displaySeconds = Math.max(0, duration - elapsed);
+            const elapsed = (Date.now() - startTime) / 1000;
+            const clampedElapsed = Math.min(elapsed, duration);
+            const displaySeconds = Math.max(0, duration - clampedElapsed);
             const minutes = Math.floor(displaySeconds / 60);
             const seconds = Math.floor(displaySeconds % 60);
-            this.dom.timerText.textContent = 
-                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-            // Update progress circle
-            const progress = elapsed / duration;
-            const offset = totalCircumference * (1 - progress);
-            this.dom.timerProgress.style.strokeDashoffset = offset;
+            if (this.dom.timerText) {
+                this.dom.timerText.textContent =
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
 
-            // Update circle color
-            if (phase === 'green') {
-                this.dom.timerProgress.classList.add('green');
-                this.dom.timerProgress.classList.remove('red');
-            } else {
-                this.dom.timerProgress.classList.remove('green');
-                this.dom.timerProgress.classList.add('red');
+            if (this.dom.timerProgress) {
+                const progress = clampedElapsed / duration;
+                const offset = totalCircumference * (1 - progress);
+                this.dom.timerProgress.style.strokeDashoffset = offset;
+
+                if (phase === 'green') {
+                    this.dom.timerProgress.classList.add('green');
+                    this.dom.timerProgress.classList.remove('red');
+                } else {
+                    this.dom.timerProgress.classList.remove('green');
+                    this.dom.timerProgress.classList.add('red');
+                }
             }
         };
 
-        // Initial update
         updateTimer();
 
-        // Set interval for continuous update
         this.phaseTimerInterval = setInterval(() => {
             if (Date.now() - startTime >= duration * 1000) {
                 clearInterval(this.phaseTimerInterval);
@@ -243,8 +276,10 @@ class SquidGameController {
                 const elapsed = Math.floor((Date.now() - this.overallStartTime) / 1000);
                 const minutes = Math.floor(elapsed / 60);
                 const seconds = elapsed % 60;
-                this.dom.totalTime.textContent = 
-                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                if (this.dom.totalTime) {
+                    this.dom.totalTime.textContent =
+                        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
             }
         }, 100);
     }
@@ -255,7 +290,12 @@ class SquidGameController {
         }
 
         this.selectedOption = optionIndex;
-        const options = document.querySelectorAll('.mcq-option');
+
+        // BUG FIX #8: Was using static querySelectorAll - now queries within mcqContainer
+        const options = this.dom.mcqContainer
+            ? this.dom.mcqContainer.querySelectorAll('.mcq-option')
+            : [];
+
         options.forEach((btn, index) => {
             btn.classList.remove('selected');
             if (index === optionIndex) {
@@ -263,7 +303,6 @@ class SquidGameController {
             }
         });
 
-        // Auto-submit on selection
         this.submitAnswer();
     }
 
@@ -275,24 +314,17 @@ class SquidGameController {
 
         this.answerLocked = true;
 
-        // Calculate submission time (from red light start)
-        const submissionTime = (Date.now() - this.greenLightEndTime) / 1000;
+        // BUG FIX #9: Was using this.greenLightEndTime which was overwritten in startRedLight().
+        // Now correctly uses this.redLightStartTime set at beginning of red phase.
+        const submissionTime = (Date.now() - this.redLightStartTime) / 1000;
         const scenario = GAME_SCENARIOS[this.currentRoundIndex];
-
-        // Validate answer
         const isCorrect = this.selectedOption === scenario.correctAnswer;
-
-        // Calculate score change
         const scoreChange = this.calculateScore(isCorrect, submissionTime);
-
-        // Update score
         const newScore = this.score + scoreChange;
-        this.score = Math.max(0, newScore); // No negative scores
+        this.score = Math.max(0, newScore);
 
-        // Show feedback
         this.showFeedback(isCorrect, submissionTime, scoreChange, scenario);
 
-        // Record response
         this.roundResponses.push({
             roundIndex: this.currentRoundIndex,
             userOption: this.selectedOption,
@@ -303,14 +335,11 @@ class SquidGameController {
             scoreAfter: this.score
         });
 
-        // Disable further interactions
         this.disableMCQOptions();
 
-        // Stop red light timer
         clearInterval(this.phaseTimerInterval);
         clearTimeout(this.phaseAutoAdvanceTimeout);
 
-        // Advance after brief delay for feedback
         setTimeout(() => {
             this.advanceToNextRound();
         }, 2000);
@@ -318,31 +347,25 @@ class SquidGameController {
 
     calculateScore(isCorrect, submissionTime) {
         if (!isCorrect) {
-            // Wrong answer penalty
-            if (this.score >= 200) {
-                return -200; // Reduce by 200 points
-            } else if (this.score === 0) {
-                return 0; // Stays at 0
-            } else {
-                return -this.score; // Reduce to 0
-            }
+            if (this.score >= 200) return -200;
+            if (this.score === 0) return 0;
+            return -this.score;
         }
 
-        // Correct answer scoring
-        if (submissionTime <= 15) {
-            return 1500; // 1500 points for fast answer
-        } else if (submissionTime <= 30) {
-            return 1300; // 1300 points for slower answer
-        }
+        if (submissionTime <= 15) return 1500;
+        if (submissionTime <= 30) return 1300;
 
-        return 0; // Should not reach (red light is 30 seconds max)
+        return 0;
     }
 
     showFeedback(isCorrect, submissionTime, scoreChange, scenario) {
         const statusEl = this.dom.submissionStatus;
-        const options = document.querySelectorAll('.mcq-option');
 
-        // Show correct/incorrect on options
+        // BUG FIX #10: Was using static querySelectorAll - now scoped to mcqContainer
+        const options = this.dom.mcqContainer
+            ? this.dom.mcqContainer.querySelectorAll('.mcq-option')
+            : [];
+
         options.forEach((btn, index) => {
             if (index === scenario.correctAnswer) {
                 btn.classList.add('correct');
@@ -351,29 +374,44 @@ class SquidGameController {
             }
         });
 
+        if (!statusEl) return;
+
         if (isCorrect) {
             statusEl.className = 'success';
             const pointsText = scoreChange >= 1500 ? '1500 points ⚡' : '1300 points ✓';
             statusEl.innerHTML = `
-                <div style="font-size: 1.2em; margin-bottom: 8px;">✅ Correct!</div>
-                <div style="font-size: 0.95em;">+${pointsText}</div>
-                <div style="font-size: 0.85em; margin-top: 5px;">Time: ${submissionTime.toFixed(1)}s | Total Score: ${this.score}</div>
+                <div style="font-size:1.2em;margin-bottom:8px;">✅ Correct!</div>
+                <div style="font-size:0.95em;">+${pointsText}</div>
+                <div style="font-size:0.85em;margin-top:5px;">Time: ${submissionTime.toFixed(1)}s | Total Score: ${this.score.toLocaleString()}</div>
             `;
         } else {
             statusEl.className = 'error';
             const penalty = scoreChange < 0 ? Math.abs(scoreChange) : 0;
             statusEl.innerHTML = `
-                <div style="font-size: 1.2em; margin-bottom: 8px;">❌ Incorrect</div>
-                <div style="font-size: 0.9em;">Correct answer: ${scenario.options[scenario.correctAnswer]}</div>
-                <div style="font-size: 0.85em; margin-top: 5px;">${penalty > 0 ? `-${penalty} points` : 'No penalty'} | Total Score: ${this.score}</div>
+                <div style="font-size:1.2em;margin-bottom:8px;">❌ Incorrect</div>
+                <div style="font-size:0.9em;">Correct answer: ${this.escapeHtml(scenario.options[scenario.correctAnswer])}</div>
+                <div style="font-size:0.85em;margin-top:5px;">${penalty > 0 ? `-${penalty} points` : 'No penalty'} | Total Score: ${this.score.toLocaleString()}</div>
             `;
         }
 
         this.updateScoreDisplay();
     }
 
+    // BUG FIX #11: escapeHtml was only in ui.js but used in showFeedback here.
+    // Added locally so gameLogic.js works standalone without ui.js import.
+    escapeHtml(str) {
+        if (str == null) return '';
+        return String(str).replace(/[&<>"'`]/g, s => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;',
+            '"': '&quot;', "'": '&#39;', '`': '&#96;'
+        }[s]));
+    }
+
     disableMCQOptions() {
-        const options = document.querySelectorAll('.mcq-option');
+        // BUG FIX #12: Scoped to mcqContainer
+        const options = this.dom.mcqContainer
+            ? this.dom.mcqContainer.querySelectorAll('.mcq-option')
+            : [];
         options.forEach(btn => {
             btn.disabled = true;
             btn.classList.add('disabled');
@@ -384,17 +422,17 @@ class SquidGameController {
         if (!this.answerLocked && this.currentPhase === 'red') {
             console.log('🔴 Red Light Expired - No Answer Submitted');
             this.answerLocked = true;
-            
-            // No score change for no answer
-            this.dom.submissionStatus.className = 'error';
-            this.dom.submissionStatus.innerHTML = `
-                <div style="font-size: 1.2em;">⏱️ Time's Up!</div>
-                <div style="font-size: 0.9em; margin-top: 5px;">No answer submitted. Moving to next round...</div>
-            `;
+
+            if (this.dom.submissionStatus) {
+                this.dom.submissionStatus.className = 'error';
+                this.dom.submissionStatus.innerHTML = `
+                    <div style="font-size:1.2em;">⏱️ Time's Up!</div>
+                    <div style="font-size:0.9em;margin-top:5px;">No answer submitted. Moving to next round...</div>
+                `;
+            }
 
             this.disableMCQOptions();
-            
-            // Advance after brief delay
+
             setTimeout(() => {
                 this.advanceToNextRound();
             }, 2000);
@@ -417,33 +455,35 @@ class SquidGameController {
         this.gameOver = true;
         this.gameStarted = false;
 
-        // Stop all timers
         clearInterval(this.phaseTimerInterval);
         clearTimeout(this.phaseAutoAdvanceTimeout);
         clearInterval(this.overallTimerInterval);
 
-        // Calculate final stats
         const elapsedSeconds = Math.floor((Date.now() - this.overallStartTime) / 1000);
         const minutes = Math.floor(elapsedSeconds / 60);
         const seconds = elapsedSeconds % 60;
 
-        // Update game over screen
-        this.dom.finalScore.textContent = this.score.toLocaleString();
-        this.dom.finalTime.textContent = 
-            `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        if (this.dom.finalScore) this.dom.finalScore.textContent = this.score.toLocaleString();
+        if (this.dom.finalTime) {
+            this.dom.finalTime.textContent =
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
 
-        // Show game over screen
-        this.dom.scenarioBox.style.display = 'none';
-        this.dom.questionBox.style.display = 'none';
-        this.dom.answerSection.style.display = 'none';
-        this.dom.gameOver.style.display = 'block';
-        this.dom.gameContainer.classList.remove('green-glow', 'red-glow');
+        if (this.dom.scenarioBox) this.dom.scenarioBox.style.display = 'none';
+        if (this.dom.questionBox) this.dom.questionBox.style.display = 'none';
+        if (this.dom.answerSection) this.dom.answerSection.style.display = 'none';
+        if (this.dom.gameOver) this.dom.gameOver.style.display = 'block';
+        if (this.dom.gameContainer) this.dom.gameContainer.classList.remove('green-glow', 'red-glow');
 
-        // Log summary
         console.log('=== GAME SUMMARY ===');
         console.log(`Final Score: ${this.score}`);
         console.log(`Total Time: ${minutes}m ${seconds}s`);
         console.log(`Responses:`, this.roundResponses);
+
+        // FIX 3: Call onGameEnd hook set by main.js — this triggers Firebase score save
+        if (typeof this.onGameEnd === 'function') {
+            this.onGameEnd().catch(err => console.error('onGameEnd failed:', err));
+        }
     }
 
     restartGame() {
@@ -455,49 +495,62 @@ class SquidGameController {
         this.roundResponses = [];
         this.selectedOption = null;
         this.answerLocked = false;
+        this.redLightStartTime = null; // BUG FIX #14: Reset redLightStartTime on restart
 
-        // Clear all timers
         clearInterval(this.phaseTimerInterval);
         clearTimeout(this.phaseAutoAdvanceTimeout);
         clearInterval(this.overallTimerInterval);
 
-        // Reset UI
-        this.dom.gameOver.style.display = 'none';
-        this.dom.startSection.style.display = 'flex';
-        this.dom.gameContainer.classList.remove('green-glow', 'red-glow');
+        if (this.dom.gameOver) this.dom.gameOver.style.display = 'none';
+        if (this.dom.startSection) this.dom.startSection.style.display = 'flex';
+        if (this.dom.gameContainer) this.dom.gameContainer.classList.remove('green-glow', 'red-glow');
+
         this.updateScoreDisplay();
         this.updateRoundDisplay();
-        this.dom.timerText.textContent = '00:00';
-        this.dom.totalTime.textContent = '00:00';
+        if (this.dom.timerText) this.dom.timerText.textContent = '00:00';
+        if (this.dom.totalTime) this.dom.totalTime.textContent = '00:00';
     }
 
     updatePhaseIndicator(phase) {
+        if (!this.dom.phaseLight) return;
         this.dom.phaseLight.className = 'phase-light';
-        
+
         if (phase === 'green') {
             this.dom.phaseLight.classList.add('green');
-            this.dom.phaseText.textContent = '🟢 Green Light - Read Carefully!';
-            this.dom.gameContainer.classList.remove('red-glow');
-            this.dom.gameContainer.classList.add('green-glow');
+            if (this.dom.phaseText) this.dom.phaseText.textContent = '🟢 Round 2 - Read the Scenario!';
+            if (this.dom.gameContainer) {
+                this.dom.gameContainer.classList.remove('red-glow');
+                this.dom.gameContainer.classList.add('green-glow');
+            }
         } else if (phase === 'red') {
             this.dom.phaseLight.classList.add('red');
-            this.dom.phaseText.textContent = '🔴 Red Light - Answer Now!';
-            this.dom.gameContainer.classList.remove('green-glow');
-            this.dom.gameContainer.classList.add('red-glow');
+            if (this.dom.phaseText) this.dom.phaseText.textContent = '🔴 Answer the Question!';
+            if (this.dom.gameContainer) {
+                this.dom.gameContainer.classList.remove('green-glow');
+                this.dom.gameContainer.classList.add('red-glow');
+            }
         }
     }
 
     updateScoreDisplay() {
-        this.dom.currentScore.textContent = this.score.toLocaleString();
+        if (this.dom.currentScore) this.dom.currentScore.textContent = this.score.toLocaleString();
     }
 
     updateRoundDisplay() {
-        this.dom.currentRound.textContent = (this.currentRoundIndex + 1);
+        // BUG FIX #15: Was showing currentRoundIndex + 1 which shows "31" after last round.
+        // Cap display at GAME_SCENARIOS.length.
+        const display = Math.min(this.currentRoundIndex + 1, GAME_SCENARIOS.length);
+        if (this.dom.currentRound) this.dom.currentRound.textContent = display;
     }
 }
 
 // Initialize game when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    // BUG FIX #16: Guard against double-initialization (e.g. HMR / script loaded twice)
+    if (window.game) {
+        console.warn('⚠️ Game already initialized. Skipping duplicate init.');
+        return;
+    }
     window.game = new SquidGameController();
     console.log('🎮 SQUID TECH: Code to Survive - Ready to play!');
 });

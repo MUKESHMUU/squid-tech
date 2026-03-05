@@ -38,7 +38,9 @@ export async function onAdminAuthStateChanged(callback) {
     const isLoggedIn = localStorage.getItem(ADMIN_SESSION_KEY) === '1';
     // Wait for Firebase to be ready before firing the callback
     if (_initPromise) await _initPromise;
-    setTimeout(() => callback(isLoggedIn ? makeAdminUser() : null), 0);
+    // FIX 1: replaced setTimeout(0) with Promise.resolve().then() so callback
+    // fires after _initPromise is truly resolved, not just scheduled
+    Promise.resolve().then(() => callback(isLoggedIn ? makeAdminUser() : null));
     return () => _authListeners.delete(callback);
 }
 
@@ -129,7 +131,16 @@ export async function requestJoin(name) {
     const inviteSnap = await getDoc(inviteRef);
     if (!inviteSnap.exists()) throw new Error('Invite not found');
 
+    // FIX 2: Check existing status before overwriting — prevents approved player
+    // from re-requesting and accidentally resetting their status back to 'pending'
     const requestRef = doc(db, 'joinRequests', id);
+    const existingSnap = await getDoc(requestRef);
+    if (existingSnap.exists()) {
+        const existingStatus = existingSnap.data()?.status;
+        if (existingStatus === 'approved') throw new Error('Already approved! Wait for admin to start the game.');
+        if (existingStatus === 'pending') throw new Error('Request already pending. Please wait for approval.');
+    }
+
     await setDoc(requestRef, {
         name: cleanName,
         status: 'pending',
